@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>辰光國小校務系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft JhengHei', '微軟正黑體', Arial, sans-serif; background: #f0f4f8; color: #1e293b; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff; padding: 0 24px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3); position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .school-logo { width: 38px; height: 38px; background: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .school-name { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+  .school-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+  .topbar-date { opacity: 0.9; }
+  .topbar-user { background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 13px; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: fixed; top: 60px; left: 0; bottom: 0; width: 220px;
+    background: #1e293b; overflow-y: auto; z-index: 90;
+  }
+  .nav-section { padding: 16px 12px 4px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+    color: #94a3b8; cursor: pointer; border-radius: 8px; margin: 2px 8px;
+    transition: all 0.2s; font-size: 14px; border: none; background: none; width: calc(100% - 16px); text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+  .nav-item.active { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.4); }
+  .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+
+  /* ── Main Content ── */
+  .main { margin-left: 220px; margin-top: 60px; padding: 24px; min-height: calc(100vh - 60px); }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+
+  /* ── Cards ── */
+  .cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .stat-icon { width: 52px; height: 52px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .stat-info .label { font-size: 13px; color: #64748b; }
+  .stat-info .value { font-size: 28px; font-weight: 700; color: #1e293b; line-height: 1.1; }
+  .stat-info .sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+  /* ── Panel / Table ── */
+  .panel { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 20px; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 16px; font-weight: 600; color: #1e293b; }
+  .panel-body { padding: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 13px;
+    color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfd; }
+
+  /* ── Buttons ── */
+  .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-success { background: #10b981; color: #fff; }
+  .btn-success:hover { background: #059669; }
+  .btn-warning { background: #f59e0b; color: #fff; }
+  .btn-warning:hover { background: #d97706; }
+  .btn-danger { background: #ef4444; color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-outline { background: transparent; border: 1px solid #e2e8f0; color: #475569; }
+  .btn-outline:hover { background: #f8fafc; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+  .badge-green  { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
+  .badge-red    { background: #fee2e2; color: #991b1b; }
+  .badge-gray   { background: #f1f5f9; color: #475569; }
+  .badge-purple { background: #ede9fe; color: #5b21b6; }
+
+  /* ── Modal ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; width: 520px; max-width: 95vw;
+    max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; padding: 4px; }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+  .form-control {
+    width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; color: #1e293b; transition: border 0.2s; outline: none;
+    font-family: inherit;
+  }
+  .form-control:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── Calendar ── */
+  .cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .cal-title { font-size: 18px; font-weight: 700; flex: 1; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-weekday { text-align: center; padding: 8px; font-size: 12px; font-weight: 600; color: #64748b; }
+  .cal-day {
+    min-height: 80px; padding: 6px; border-radius: 8px; cursor: pointer;
+    transition: background 0.15s; position: relative;
+  }
+  .cal-day:hover { background: #f0f4f8; }
+  .cal-day.today { background: #dbeafe; }
+  .cal-day.other-month .day-num { color: #cbd5e1; }
+  .day-num { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .cal-event-dot { font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+
+  /* ── Event types ── */
+  .type-行政 { background: #dbeafe; color: #1d4ed8; }
+  .type-教學 { background: #d1fae5; color: #065f46; }
+  .type-活動 { background: #fef3c7; color: #92400e; }
+  .type-假日 { background: #fee2e2; color: #991b1b; }
+  .type-考試 { background: #ede9fe; color: #5b21b6; }
+  .type-進修 { background: #fce7f3; color: #9d174d; }
+  .type-SEL { background: #ccfbf1; color: #0f5f51; }
+  .conflict-day { outline: 2px solid #dc2626 !important; background: #fff5f5 !important; }
+  .conflict-panel { border:2px solid #fca5a5; border-radius:10px; background:#fff5f5; padding:16px; margin-top:12px; }
+  .conflict-row { display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #fecaca; }
+  .conflict-row:last-child { border-bottom:none; }
+  .conflict-date { min-width:110px; font-weight:700; color:#dc2626; font-size:13px; }
+  .conflict-school { background:#dbeafe; color:#1e40af; border-radius:4px; padding:2px 7px; font-size:12px; margin:2px 2px 2px 0; display:inline-block; }
+  .conflict-personal { background:#fce7f3; color:#9d174d; border-radius:4px; padding:2px 7px; font-size:12px; margin:2px 2px 2px 0; display:inline-block; }
+  .conflict-hint { font-size:11px; color:#9ca3af; margin-top:3px; }
+
+  /* ── Grades ── */
+  .grade-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+    background: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .filter-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .score-bar-bg { background: #f1f5f9; border-radius: 4px; height: 8px; overflow: hidden; }
+  .score-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
+
+  /* ── Progress ── */
+  .progress-bg { background: #e2e8f0; border-radius: 4px; height: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+
+  /* ── Dashboard grid ── */
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* ── Event list item ── */
+  .event-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .event-item:last-child { border-bottom: none; }
+  .event-date-box { min-width: 44px; background: #f0f4f8; border-radius: 8px; text-align: center; padding: 6px 4px; }
+  .event-date-box .mon { font-size: 10px; color: #64748b; }
+  .event-date-box .day { font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1; }
+  .event-info .title { font-size: 14px; font-weight: 600; }
+  .event-info .meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  /* ── Task item ── */
+  .task-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+  .task-row:last-child { border-bottom: none; }
+  .task-row:hover { background: #fafbfd; }
+  .task-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #d1d5db;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .task-check.done { border-color: #10b981; background: #10b981; color: #fff; }
+  .task-text { flex: 1; }
+  .task-title { font-size: 14px; }
+  .task-title.done { text-decoration: line-through; color: #94a3b8; }
+  .task-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) { .cards-row { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 800px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .dash-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    .sidebar, .topbar, .btn, .modal-overlay { display: none !important; }
+    .main { margin: 0; padding: 0; }
+  }
+
+  .empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 10px; }
+
+  .chart-container { position: relative; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 0 4px; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.5s; min-width: 24px; }
+  .bar-label { font-size: 11px; color: #64748b; }
+  .bar-val { font-size: 11px; font-weight: 600; color: #374151; }
+
+  .summary-list { list-style: none; }
+  .summary-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+  .summary-list li:last-child { border-bottom: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  textarea.form-control { resize: vertical; min-height: 80px; }
+  select.form-control { cursor: pointer; }
+
+  .score-cell { font-weight: 700; }
+  .score-a { color: #059669; }
+  .score-b { color: #2563eb; }
+  .score-c { color: #f59e0b; }
+  .score-d { color: #ef4444; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="school-logo">🏫</div>
+    <div>
+      <div class="school-name">辰光國民小學</div>
+      <div class="school-sub">校務行政管理系統</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="topbarDate"></span>
+    <span class="topbar-user">👤 校長</span>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nav-section">主選單</div>
+  <button class="nav-item active" onclick="showPage('dashboard',this)">
+    <span class="nav-icon">📊</span> 系統儀表板
+  </button>
+  <div class="nav-section">學校事務</div>
+  <button class="nav-item" onclick="showPage('calendar',this)">
+    <span class="nav-icon">📅</span> 學校行事曆
+  </button>
+  <button class="nav-item" onclick="showPage('grades',this)">
+    <span class="nav-icon">📝</span> 學生成績管理
+  </button>
+  <button class="nav-item" onclick="showPage('admin',this)">
+    <span class="nav-icon">📋</span> 行政業務追蹤
+  </button>
+  <button class="nav-item" onclick="showPage('training',this)">
+    <span class="nav-icon">🎓</span> 教師進修活動
+  </button>
+  <button class="nav-item" onclick="showPage('sel',this)">
+    <span class="nav-icon">💚</span> SEL 校本課程
+  </button>
+  <button class="nav-item" onclick="showPage('staff',this)">
+    <span class="nav-icon">👩‍🏫</span> 教職員名冊
+  </button>
+  <div class="nav-section">雲端資源</div>
+  <button class="nav-item" onclick="showPage('drive',this)">
+    <span class="nav-icon">☁️</span> Google Drive
+  </button>
+  <div class="nav-section">工具</div>
+  <button class="nav-item" onclick="printPage()">
+    <span class="nav-icon">🖨️</span> 列印報表
+  </button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ═══════════════════════════════════════════════════════ DASHBOARD -->
+  <section class="page active" id="page-dashboard">
+    <div class="page-title">📊 系統儀表板</div>
+
+    <div class="cards-row" id="dashCards"></div>
+
+    <div class="dash-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📅 近期行程</span>
+          <button class="btn btn-outline btn-sm" onclick="showPage('calendar', document.querySelector('[onclick*=calendar]'))">查看全部</button>
+        </div>
+        <div class="panel-body" id="dashEvents"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📋 待辦業務</span>
+          <button class="btn btn-outline btn-sm" onclick="showPage('admin', document.querySelector('[onclick*=admin]'))">查看全部</button>
+        </div>
+        <div id="dashTasks"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📝 各年級平均成績</span>
+        </div>
+        <div class="panel-body">
+          <div class="bar-chart" id="dashChart"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🎓 教師進修統計</span>
+        </div>
+        <div class="panel-body" id="dashTraining"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ CALENDAR -->
+  <section class="page" id="page-calendar">
+    <div class="page-title">📅 學校行事曆
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openEventModal()">＋ 新增活動</button>
+      <span style="font-size:11px;color:#1a73e8;background:#e8f0fe;border:1px solid #c5d9fb;border-radius:10px;padding:3px 9px;margin-left:8px">📅 藍框 = Google 行事曆同步</span>
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="cal-nav">
+          <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)">◀</button>
+          <div class="cal-title" id="calTitle"></div>
+          <button class="btn btn-outline btn-sm" onclick="changeMonth(1)">▶</button>
+          <button class="btn btn-outline btn-sm" onclick="goToday()">今天</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="badge badge-blue">行政</span>
+          <span class="badge badge-green">教學</span>
+          <span class="badge badge-yellow">活動</span>
+          <span class="badge badge-red">假日</span>
+          <span class="badge badge-purple">考試</span>
+          <span style="background:#fce7f3;color:#9d174d" class="badge">進修</span>
+          <span style="background:#ccfbf1;color:#0f5f51" class="badge">SEL</span>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-weekday">日</div><div class="cal-weekday">一</div>
+          <div class="cal-weekday">二</div><div class="cal-weekday">三</div>
+          <div class="cal-weekday">四</div><div class="cal-weekday">五</div>
+          <div class="cal-weekday">六</div>
+        </div>
+        <div class="cal-grid" id="calGrid" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">本月活動清單</span></div>
+      <table>
+        <thead><tr><th>日期</th><th>活動名稱</th><th>類型</th><th>說明</th><th>操作</th></tr></thead>
+        <tbody id="eventTableBody"></tbody>
+      </table>
+    </div>
+    <div class="conflict-panel" id="conflictPanel" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:18px">🚨</span>
+        <strong style="color:#dc2626;font-size:15px">行程衝突提醒</strong>
+        <span id="conflictCount" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700"></span>
+        <span style="font-size:11px;color:#6b7280;margin-left:4px">校長個人行程 × 學校重要活動</span>
+      </div>
+      <div id="conflictList"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ GRADES -->
+  <section class="page" id="page-grades">
+
+    <!-- 標題列：學年度 + 學期 -->
+    <div class="page-title" style="flex-wrap:wrap;gap:8px">
+      <span>📝 學生成績管理</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:12px">
+        <select class="form-control" style="width:110px;padding:5px 8px;font-weight:600" id="gradeYear" onchange="renderGradePage()">
+          <option value="114">114學年度</option>
+          <option value="113">113學年度</option>
+          <option value="112">112學年度</option>
+        </select>
+        <select class="form-control" style="width:90px;padding:5px 8px;font-weight:600" id="gradeSemester" onchange="renderGradePage()">
+          <option value="2">第2學期</option>
+          <option value="1">第1學期</option>
+        </select>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-warning btn-sm" onclick="exportToExcel()" title="匯出目前班級成績">📤 匯出Excel</button>
+        <label class="btn btn-primary btn-sm" style="cursor:pointer" title="從Excel匯入成績">
+          📥 匯入Excel
+          <input type="file" accept=".xlsx" style="display:none" onchange="importFromExcel(this)">
+        </label>
+      </div>
+    </div>
+
+    <!-- 班級 Tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="classTabs"></div>
+
+    <!-- 階段 Tabs -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;width:fit-content">
+      <button id="stageBtn1" onclick="setGradeStage('1')"
+        style="padding:8px 22px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-right:1px solid #e2e8f0;background:#3b82f6;color:#fff">
+        📝 第一階段
+      </button>
+      <button id="stageBtn2" onclick="setGradeStage('2')"
+        style="padding:8px 22px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-right:1px solid #e2e8f0;background:#f8fafc;color:#374151">
+        📝 第二階段
+      </button>
+      <button id="stageBtnFinal" onclick="setGradeStage('final')"
+        style="padding:8px 22px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:#f8fafc;color:#374151">
+        🏆 學期總成績
+      </button>
+    </div>
+
+    <!-- 第一/第二階段輸入面板 -->
+    <div id="gradeViewInput">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title" id="inputPanelTitle">批次輸入成績</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="form-control" style="width:120px;padding:5px 8px" id="inputSubject">
+              <option>國語</option><option>數學</option><option>英語</option>
+              <option>自然</option><option>社會</option><option>生活</option>
+              <option>體育</option><option>音樂</option><option>視覺藝術</option>
+            </select>
+            <input type="date" class="form-control" style="width:140px;padding:5px 8px" id="inputDate">
+            <button class="btn btn-success btn-sm" onclick="saveAllInputScores()">💾 儲存全班</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th style="width:50px">座號</th><th>學號</th><th>姓名</th><th style="width:140px">分數（0-100）</th><th style="width:80px">等第</th><th>備註</th></tr>
+          </thead>
+          <tbody id="inputTableBody"></tbody>
+        </table>
+        <div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b">
+          💡 直接在分數欄輸入數字，按 Tab 跳下一位，Enter 快速儲存
+        </div>
+      </div>
+    </div>
+
+    <!-- 學期總成績面板 -->
+    <div id="gradeViewFinal" style="display:none">
+      <div class="panel">
+        <div class="panel-header" style="flex-wrap:wrap;gap:8px">
+          <span class="panel-title" id="finalTitle">學期總成績</span>
+          <span id="finalFormulaNote"></span>
+          <div style="display:flex;gap:8px;margin-left:auto">
+            <select class="form-control" style="width:120px;padding:5px 8px" id="filterFinalSubject" onchange="renderGradeFinal()">
+              <option value="">全部科目</option>
+              <option>國語</option><option>數學</option><option>英語</option>
+              <option>自然</option><option>社會</option><option>生活</option>
+              <option>體育</option><option>音樂</option><option>視覺藝術</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="finalTable">
+            <thead id="finalTableHead"></thead>
+            <tbody id="finalTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ ADMIN -->
+  <section class="page" id="page-admin">
+    <div class="page-title">📋 行政業務追蹤
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openAdminModal()">＋ 新增業務</button>
+    </div>
+    <div class="grade-filters">
+      <button class="filter-btn active" onclick="filterAdmin('all',this)">全部</button>
+      <button class="filter-btn" onclick="filterAdmin('待辦',this)">待辦</button>
+      <button class="filter-btn" onclick="filterAdmin('進行中',this)">進行中</button>
+      <button class="filter-btn" onclick="filterAdmin('已完成',this)">已完成</button>
+    </div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>業務名稱</th><th>負責人</th><th>截止日期</th><th>優先度</th><th>狀態</th><th>進度</th><th>操作</th></tr></thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ TRAINING -->
+  <section class="page" id="page-training">
+    <div class="page-title">🎓 教師進修活動
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openTrainingModal()">＋ 新增進修</button>
+    </div>
+    <div class="cards-row" id="trainingStats" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">進修活動記錄</span>
+        <select class="form-control" style="width:120px;padding:5px 8px" id="trainingFilter" onchange="renderTrainingTable()">
+          <option value="">全部類別</option>
+          <option>教學研究</option>
+          <option>行政研習</option>
+          <option>輔導知能</option>
+          <option>資訊應用</option>
+          <option>特教知能</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>活動名稱</th><th>參與教師</th><th>類別</th><th>日期</th><th>時數</th><th>辦理單位</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="trainingTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ STAFF -->
+  <section class="page" id="page-staff">
+    <div class="page-title">👩‍🏫 教職員名冊
+      <span style="font-size:13px;font-weight:400;color:#64748b;margin-left:6px">雲林縣北港鎮辰光國民小學</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="toggleStaffView()" id="staffViewBtn">🃏 卡片視圖</button>
+        <button class="btn btn-primary btn-sm" onclick="openStaffModal()">＋ 新增人員</button>
+      </div>
+    </div>
+
+    <!-- 生日通知橫幅 -->
+    <div id="birthdayBanner" style="margin-bottom:16px"></div>
+
+    <!-- 統計卡 -->
+    <div class="cards-row" id="staffStats" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px"></div>
+
+    <!-- 篩選列 -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      <select class="form-control" style="width:140px;padding:6px 10px" id="staffUnitFilter" onchange="renderStaff()">
+        <option value="">全部單位</option>
+        <option>教導處</option><option>總務處</option>
+      </select>
+      <select class="form-control" style="width:140px;padding:6px 10px" id="staffTypeFilter" onchange="renderStaff()">
+        <option value="">全部職類</option>
+        <option>主任</option><option>組長</option><option>教師</option><option>代理教師</option><option>護理師</option><option>工友</option>
+      </select>
+      <select class="form-control" style="width:140px;padding:6px 10px" id="staffSortFilter" onchange="renderStaff()">
+        <option value="default">預設排序</option>
+        <option value="birthday">生日（近到遠）</option>
+        <option value="name">姓名筆劃</option>
+        <option value="salary">薪點高低</option>
+      </select>
+      <input class="form-control" id="staffSearch" style="width:180px;padding:6px 10px" placeholder="🔍 搜尋姓名或職稱..." oninput="renderStaff()">
+      <span id="staffCount" style="font-size:13px;color:#64748b;margin-left:4px"></span>
+    </div>
+
+    <!-- 卡片視圖（預設隱藏） -->
+    <div id="staffCardGrid" style="display:none;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px"></div>
+
+    <!-- 表格視圖（預設顯示） -->
+    <div class="panel" id="staffTablePanel">
+      <div class="panel-header">
+        <span class="panel-title">📋 教職員詳細名冊</span>
+        <span id="staffTableCount" style="font-size:13px;color:#64748b"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr style="font-size:12px">
+              <th style="min-width:36px">#</th>
+              <th>姓名</th>
+              <th>性別</th>
+              <th>職稱</th>
+              <th>單位</th>
+              <th>職系/列等</th>
+              <th>出生年月日</th>
+              <th>年齡</th>
+              <th>距生日</th>
+              <th>初任公職日</th>
+              <th>服務年資</th>
+              <th>學歷</th>
+              <th>薪點</th>
+              <th>電話</th>
+              <th style="min-width:120px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="staffTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 年度生日月份分組 -->
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-header">
+        <span class="panel-title">🎂 全年生日月曆</span>
+        <span style="font-size:12px;color:#64748b">依月份排列，方便備禮與祝賀</span>
+      </div>
+      <div class="panel-body" id="birthdayCalendar"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ GOOGLE DRIVE -->
+  <section class="page" id="page-drive">
+    <div class="page-title">☁️ Google Drive 雲端資料夾
+      <a href="https://drive.google.com/drive/u/0/folders/1MasH6OvSiYEd2TVWk8zxaLpIQyDXL8co" target="_blank" class="btn btn-outline btn-sm" style="margin-left:auto;text-decoration:none">🔗 開啟 Drive</a>
+    </div>
+
+    <!-- 根目錄說明 -->
+    <div style="background:linear-gradient(135deg,#1a73e8,#4285f4);color:#fff;border-radius:14px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:36px">📁</div>
+      <div>
+        <div style="font-size:17px;font-weight:700">辰光國小</div>
+        <div style="font-size:13px;opacity:0.85;margin-top:3px">擁有者：cgpsylc@cgps.ylc.edu.tw ／ 最後修改：2026-03-19</div>
+        <div style="font-size:12px;opacity:0.7;margin-top:2px">共 5 個子資料夾</div>
+      </div>
+    </div>
+
+    <!-- 資料夾卡片 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px">
+
+      <!-- SEL校本 -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-header" style="background:#f0fdf9">
+          <span class="panel-title">💚 SEL校本</span>
+          <a href="https://drive.google.com/drive/folders/1w_X9fvcdfhDGtBbcT2LDzG76IRCcI-pQ" target="_blank" class="btn btn-success btn-sm" style="text-decoration:none">開啟</a>
+        </div>
+        <div class="panel-body" style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">最後修改：2026-05-07</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li><a href="https://drive.google.com/drive/folders/1QIaM3Clcp-tBEwvhzhFo78jtBMvXosAZ" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 校本教案-導師</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1qkkCAOfK9ttR2vgOpKGc31WQZlQAZFTs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 週一晨會SEL</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1hYuYujLB_ZwbAJNTnr4xpEFK_n06oRzZ" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-check in&amp;out-科任</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1S74S0YUbTuI1cPbNNIO6WWdOoDMGDvy_" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-線上遊戲</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1iUmSMlT2BhP0sj4AkvCN4t4gIiymAtHR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 圍圈</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1Gfd-ufURJt3ZC9bur4sIqLRJOgH0CZDw" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL各種資源</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1xwWBVzbxm2ZDbrRFR_birOSg0_vEY4IR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 雙語SEL-英師</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1h5JQikvVKfXF-jrmQUZG43xwEDE6fTxs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 教室佈置</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 辰光會議 -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-header" style="background:#fef9f0">
+          <span class="panel-title">📋 辰光會議</span>
+          <a href="https://drive.google.com/drive/folders/1BUeIuZIi9I2kZ_x4doj7NpLck_q9CjAb" target="_blank" class="btn btn-warning btn-sm" style="text-decoration:none">開啟</a>
+        </div>
+        <div class="panel-body" style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">最後修改：2025-10-15</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li><a href="https://drive.google.com/drive/folders/1FR_KekB2K_hJEvDkX0sNCQxo7Gl9e4ly" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 114學年度</a></li>
+            <li><a href="https://drive.google.com/drive/folders/16B-qSpn8QiXufIm4DzdXuxWYJAShm0Xe" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 113學年度</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1mCO2__czr1X_X8iYOY_AXo67XcM3r-mH" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 112學年度</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 評量試卷 -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-header" style="background:#fdf4ff">
+          <span class="panel-title">📝 評量試卷</span>
+          <a href="https://drive.google.com/drive/folders/1u2VY0ETqeRrdtaPd81fQmZ9lzuX535yF" target="_blank" class="btn btn-sm" style="text-decoration:none;background:#8b5cf6;color:#fff">開啟</a>
+        </div>
+        <div class="panel-body" style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">最後修改：2026-02-07</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li><a href="https://drive.google.com/drive/folders/1AnDvEQDWvUP5hY4h84dFLTGzkJ8tk409" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 114學年度</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1mDlLp6iEkGOFGCKKRAkwiWoSTgM2mwIA" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 113學年度</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1sHv64qmp-8Mr2_tmLpydB1YPqXgRFwj5" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 112學年度</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 行事曆 -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-header" style="background:#eff6ff">
+          <span class="panel-title">📅 行事曆</span>
+          <a href="https://drive.google.com/drive/folders/19uiWe851TzWUdITNvESurnxCoSSgDEVE" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none">開啟</a>
+        </div>
+        <div class="panel-body" style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">最後修改：2026-02-07</div>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:4px">
+            <li><a href="https://drive.google.com/file/d/11O-6yxeNZF-FNa5poOuhuQIYR45DNBTq/view" target="_blank" style="text-decoration:none;color:#1d4ed8;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📄 114上行事曆.docx</a></li>
+          </ul>
+          <div style="margin-top:10px">
+            <span class="badge badge-green" style="font-size:11px">✅ 已匯入系統行事曆</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-header" style="background:#f8f0ff">
+          <span class="panel-title">🤖 AI</span>
+          <a href="https://drive.google.com/drive/folders/112TKJOWFDepS0nWueFNHdOyvmtwi-bfZ" target="_blank" class="btn btn-sm" style="text-decoration:none;background:#7c3aed;color:#fff">開啟</a>
+        </div>
+        <div class="panel-body" style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px">最後修改：2025-11-18</div>
+          <div style="font-size:13px;color:#94a3b8;font-style:italic">資料夾內容待載入</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 行事曆週次總表 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📅 114學年度第一學期行事曆週次總覽</span>
+        <a href="https://drive.google.com/file/d/11O-6yxeNZF-FNa5poOuhuQIYR45DNBTq/view" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">📄 原始檔案</a>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>週次</th><th>日期</th><th>行政人事重點</th><th>SEL主題</th><th>品德主題</th><th>教導處</th>
+            </tr>
+          </thead>
+          <tbody id="calWeeklyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ SEL -->
+  <section class="page" id="page-sel">
+    <div class="page-title">💚 SEL 校本課程管理
+      <button class="btn btn-success btn-sm" style="margin-left:auto" onclick="openSelModal()">＋ 新增課程</button>
+    </div>
+
+    <!-- SEL 介紹帶 -->
+    <div style="background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">社會情緒學習（SEL）</div>
+        <div style="opacity:0.9;font-size:14px;line-height:1.7">SEL 校本課程以五大核心能力為主軸：<strong>自我覺察、自我管理、社會覺察、人際技巧、負責任決策</strong>，融入課程與班級活動，培育全人發展。</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">自我覺察</div>
+          <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">自我管理</div>
+          <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">社會覺察</div>
+          <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">人際技巧</div>
+          <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600">負責任決策</div>
+      </div>
+    </div>
+
+    <!-- 統計卡 -->
+    <div class="cards-row" id="selStats" style="grid-template-columns:repeat(4,1fr)"></div>
+
+    <!-- 篩選 -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select class="form-control" style="width:150px;padding:6px 10px" id="selDomainFilter" onchange="renderSelTable()">
+        <option value="">全部核心能力</option>
+        <option>自我覺察</option><option>自我管理</option><option>社會覺察</option>
+        <option>人際技巧</option><option>負責任決策</option>
+      </select>
+      <select class="form-control" style="width:160px;padding:6px 10px" id="selGradeFilter" onchange="renderSelTable()">
+        <option value="">全部年段</option>
+        <option>低年級（1-2年級）</option><option>中年級（3-4年級）</option>
+        <option>高年級（5-6年級）</option><option>全校</option>
+      </select>
+      <select class="form-control" style="width:130px;padding:6px 10px" id="selStatusFilter" onchange="renderSelTable()">
+        <option value="">全部狀態</option>
+        <option>已完成</option><option>進行中</option><option>已報名</option><option>規劃中</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead>
+          <tr><th>課程名稱</th><th>核心能力</th><th>年段</th><th>授課教師</th><th>實施日期</th><th>節數</th><th>狀態</th><th>課程目標</th><th>操作</th></tr>
+        </thead>
+        <tbody id="selTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 各能力進度 -->
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-header"><span class="panel-title">📊 五大核心能力課程進度</span></div>
+      <div class="panel-body" id="selProgress"></div>
+    </div>
+
+    <!-- 行事曆連結 -->
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-header"><span class="panel-title">📅 本學期 SEL 行事曆</span></div>
+      <div class="panel-body" id="selCalList"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="eventModalTitle">新增活動</span>
+      <button class="modal-close" onclick="closeModal('eventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">活動名稱 *</label>
+        <input class="form-control" id="ev_name" placeholder="請輸入活動名稱">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">日期 *</label>
+          <input type="date" class="form-control" id="ev_date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">類型 *</label>
+          <select class="form-control" id="ev_type">
+            <option>行政</option><option>教學</option><option>活動</option>
+            <option>假日</option><option>考試</option><option>進修</option>
+            <option>SEL</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">說明</label>
+        <textarea class="form-control" id="ev_desc" placeholder="活動說明（選填）"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('eventModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveEvent()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Grade Modal -->
+<div class="modal-overlay" id="gradeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="gradeModalTitle">新增成績</span>
+      <button class="modal-close" onclick="closeModal('gradeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">年級 *</label>
+          <select class="form-control" id="gr_grade">
+            <option>一年級</option><option>二年級</option><option>三年級</option>
+            <option>四年級</option><option>五年級</option><option>六年級</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">班級 *</label>
+          <select class="form-control" id="gr_class">
+            <option>甲班</option><option>乙班</option><option>丙班</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">學生姓名 *</label>
+          <input class="form-control" id="gr_name" placeholder="請輸入姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">科目 *</label>
+          <select class="form-control" id="gr_subject">
+            <option>國語</option><option>數學</option><option>英語</option>
+            <option>自然</option><option>社會</option><option>生活</option><option>體育</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">考試類型 *</label>
+          <select class="form-control" id="gr_exam">
+            <option>第一次段考</option><option>第二次段考</option><option>期中考</option>
+            <option>期末考</option><option>隨堂測驗</option><option>作業</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">日期 *</label>
+          <input type="date" class="form-control" id="gr_date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">分數（0–100）*</label>
+        <input type="number" class="form-control" id="gr_score" min="0" max="100" placeholder="請輸入分數">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <input class="form-control" id="gr_note" placeholder="備註（選填）">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('gradeModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveGrade()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Modal -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="adminModalTitle">新增行政業務</span>
+      <button class="modal-close" onclick="closeModal('adminModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">業務名稱 *</label>
+        <input class="form-control" id="ad_name" placeholder="請輸入業務名稱">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">負責人 *</label>
+          <input class="form-control" id="ad_owner" placeholder="負責教師/職員">
+        </div>
+        <div class="form-group">
+          <label class="form-label">截止日期</label>
+          <input type="date" class="form-control" id="ad_due">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">優先度</label>
+          <select class="form-control" id="ad_priority">
+            <option>高</option><option>中</option><option>低</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-control" id="ad_status">
+            <option>待辦</option><option>進行中</option><option>已完成</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">進度（%）</label>
+        <input type="number" class="form-control" id="ad_progress" min="0" max="100" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">業務說明</label>
+        <textarea class="form-control" id="ad_desc" placeholder="業務內容說明（選填）"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('adminModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveAdmin()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Training Modal -->
+<div class="modal-overlay" id="trainingModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="trainingModalTitle">新增進修活動</span>
+      <button class="modal-close" onclick="closeModal('trainingModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">活動名稱 *</label>
+        <input class="form-control" id="tr_name" placeholder="請輸入進修活動名稱">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">參與教師 *</label>
+          <input class="form-control" id="tr_teacher" placeholder="教師姓名（多人以逗號分隔）">
+        </div>
+        <div class="form-group">
+          <label class="form-label">類別 *</label>
+          <select class="form-control" id="tr_type">
+            <option>教學研究</option><option>行政研習</option><option>輔導知能</option>
+            <option>資訊應用</option><option>特教知能</option><option>其他</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">日期 *</label>
+          <input type="date" class="form-control" id="tr_date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">時數 *</label>
+          <input type="number" class="form-control" id="tr_hours" min="0.5" step="0.5" value="3">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">辦理單位</label>
+          <input class="form-control" id="tr_org" placeholder="主辦機關">
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-control" id="tr_status">
+            <option>已報名</option><option>進行中</option><option>已完成</option><option>取消</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea class="form-control" id="tr_note" placeholder="備註（選填）"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('trainingModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveTraining()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Modal -->
+<div class="modal-overlay" id="staffModal">
+  <div class="modal" style="width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="staffModalTitle">新增教職員</span>
+      <button class="modal-close" onclick="closeModal('staffModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0369a1">
+        💡 出生日期格式：民國年月日，7位數字，例如民國53年10月22日請填 <strong>0531022</strong>
+      </div>
+      <!-- 基本資料 -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">基本資料</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">姓名 *</label>
+          <input class="form-control" id="sf_name" placeholder="請輸入姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">性別</label>
+          <select class="form-control" id="sf_gender"><option>女</option><option>男</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">出生年月日（民國7碼）*</label>
+          <input class="form-control" id="sf_birth" placeholder="例：0531022（民國53年10月22日）" maxlength="7">
+        </div>
+        <div class="form-group">
+          <label class="form-label">身分證/職編號碼</label>
+          <input class="form-control" id="sf_idno" placeholder="例：W610010（護理師職編）">
+        </div>
+      </div>
+      <!-- 職務資料 -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">職務資料</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">單位</label>
+          <select class="form-control" id="sf_unit">
+            <option>教導處</option><option>總務處</option><option>校長室</option><option>輔導室</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">職稱 *</label>
+          <input class="form-control" id="sf_title" placeholder="例：教師兼教導主任">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">職系/列等</label>
+          <input class="form-control" id="sf_rank" placeholder="例：教師、師(三)級、無資位">
+        </div>
+        <div class="form-group">
+          <label class="form-label">現支薪點</label>
+          <input class="form-control" id="sf_salary" placeholder="例：650薪點">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">初任公職日（民國）</label>
+          <input class="form-control" id="sf_startDate" placeholder="例：0780801">
+        </div>
+        <div class="form-group">
+          <label class="form-label">本機關到職日（民國）</label>
+          <input class="form-control" id="sf_curUnit">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">現職到職日（民國）</label>
+        <input class="form-control" id="sf_currentDate" placeholder="例：1010801">
+      </div>
+      <!-- 學歷與經歷 -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">學歷與經歷</div>
+      <div class="form-group">
+        <label class="form-label">最高學歷</label>
+        <input class="form-control" id="sf_edu" placeholder="例：國立中正大學教育學系碩士畢業">
+      </div>
+      <div class="form-group">
+        <label class="form-label">主要經歷</label>
+        <textarea class="form-control" id="sf_exp" placeholder="歷任職務，每項換行" style="min-height:70px"></textarea>
+      </div>
+      <!-- 聯絡資料 -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">聯絡資料</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">電話（市話）</label>
+          <input class="form-control" id="sf_phone" placeholder="例：05-7825638">
+        </div>
+        <div class="form-group">
+          <label class="form-label">手機</label>
+          <input class="form-control" id="sf_mobile" placeholder="例：0919050682">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">通訊地址</label>
+        <input class="form-control" id="sf_addr" placeholder="通訊地址">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <input class="form-control" id="sf_note" placeholder="備註（選填）">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="sfDeleteBtn" style="margin-right:auto;display:none" onclick="deleteCurrentStaff()">🗑 刪除此人員</button>
+      <button class="btn btn-outline" onclick="closeModal('staffModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveStaff()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEL Modal -->
+<div class="modal-overlay" id="selModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="selModalTitle">新增 SEL 課程</span>
+      <button class="modal-close" onclick="closeModal('selModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">課程名稱 *</label>
+        <input class="form-control" id="sel_name" placeholder="請輸入課程名稱">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">核心能力 *</label>
+          <select class="form-control" id="sel_domain">
+            <option>自我覺察</option><option>自我管理</option><option>社會覺察</option>
+            <option>人際技巧</option><option>負責任決策</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">適用年段 *</label>
+          <select class="form-control" id="sel_gradeGroup">
+            <option>低年級（1-2年級）</option><option>中年級（3-4年級）</option>
+            <option>高年級（5-6年級）</option><option>全校</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">授課教師 *</label>
+          <input class="form-control" id="sel_teacher" placeholder="教師姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">實施日期</label>
+          <input type="date" class="form-control" id="sel_date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">節數</label>
+          <input type="number" class="form-control" id="sel_sessions" min="1" value="4">
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-control" id="sel_status">
+            <option>規劃中</option><option>已報名</option><option>進行中</option><option>已完成</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">課程目標</label>
+        <textarea class="form-control" id="sel_goal" placeholder="本課程欲達成的學習目標"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">主要活動方式</label>
+        <input class="form-control" id="sel_activity" placeholder="例：角色扮演、繪本討論、小組合作...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <input class="form-control" id="sel_note" placeholder="備註（選填）">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('selModal')">取消</button>
+      <button class="btn btn-success" onclick="saveSel()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  DATA STORE (in-memory)
+// ═══════════════════════════════════════════════════════════════
+const today = new Date();
+const y = today.getFullYear(), m = today.getMonth();
+const yy = String(y), mm = String(m+1).padStart(2,'0');
+
+// 真實行事曆：來源 Google Drive 114上行事曆.docx
+let events = [
+  // 開學與行政
+  {id:1,  name:'開學始業式',           date:'2025-08-25', type:'行政', desc:'迎新入學闖關活動、新生家長座談'},
+  {id:2,  name:'校務會議',             date:'2025-08-27', type:'行政', desc:'期初校務會議'},
+  {id:3,  name:'教師節補假',           date:'2025-09-29', type:'假日', desc:''},
+  {id:4,  name:'中秋節放假',           date:'2025-10-06', type:'假日', desc:''},
+  {id:5,  name:'國慶日放假',           date:'2025-10-10', type:'假日', desc:''},
+  {id:6,  name:'全國運動會調整放假',   date:'2025-10-17', type:'假日', desc:'10/17補10/25假'},
+  {id:7,  name:'全國運動會放假週',     date:'2025-10-20', type:'假日', desc:'全校師生調整放假'},
+  {id:8,  name:'行憲紀念日放假',       date:'2025-12-25', type:'假日', desc:''},
+  {id:9,  name:'元旦放假',             date:'2026-01-01', type:'假日', desc:''},
+  // 家長/親師
+  {id:10, name:'家庭訪問週',           date:'2025-09-17', type:'教學', desc:'各班導師家庭訪問'},
+  {id:11, name:'親職座談暨班級親師座談', date:'2025-09-20', type:'活動', desc:'上午9點～12:30'},
+  // 評量
+  {id:12, name:'期中評量（四五）',     date:'2025-11-06', type:'考試', desc:'各年級期中評量第一天'},
+  {id:13, name:'期中評量（四五）',     date:'2025-11-07', type:'考試', desc:'各年級期中評量第二天'},
+  {id:14, name:'期末評量（四五）',     date:'2026-01-15', type:'考試', desc:'各年級期末評量第一天'},
+  {id:15, name:'期末評量（四五）',     date:'2026-01-16', type:'考試', desc:'各年級期末評量第二天'},
+  // 健康
+  {id:16, name:'一四年級健康檢查',     date:'2025-10-01', type:'行政', desc:'7:50 一、四年級健康檢查'},
+  {id:17, name:'流感疫苗接種',         date:'2025-10-07', type:'行政', desc:'8:30全校流感疫苗'},
+  {id:18, name:'寄生蟲尿液檢查',       date:'2025-09-17', type:'行政', desc:'8:50 全校寄生蟲及尿液檢查'},
+  // 活動
+  {id:19, name:'暑假作業展',           date:'2025-09-15', type:'活動', desc:'9/15-9/17 展覽三天'},
+  {id:20, name:'戶外教育-外傘頂洲',   date:'2025-11-13', type:'活動', desc:'活化課程戶外教育體驗學習之旅'},
+  {id:21, name:'水林全國烏克麗麗嘉年華', date:'2025-11-09', type:'活動', desc:'全國烏克麗麗嘉年華暨檢定'},
+  {id:22, name:'社區健走暨運動會',     date:'2025-12-27', type:'活動', desc:'迎新創意變裝秀踩街暨學生動靜態成果展'},
+  // 校務
+  {id:23, name:'校務會議（期末）',     date:'2026-01-19', type:'行政', desc:'下午夕會暨校務會議'},
+  {id:24, name:'休業式',               date:'2026-01-20', type:'行政', desc:'114學年度第一學期休業式'},
+  {id:25, name:'第二學期開始',         date:'2026-02-13', type:'行政', desc:'114學年度第二學期開學'},
+  {id:26, name:'性別平等委員會',       date:'2025-08-27', type:'行政', desc:'期初性別平等、交通安全委員會會議'},
+  {id:27, name:'家長委員會召開',       date:'2025-09-12', type:'行政', desc:'召開114學年度家長委員會'},
+  // SEL（源自行事曆）
+  {id:28, name:'SEL情緒表達便利貼牆', date:'2025-08-31', type:'SEL', desc:'自我覺察：I feel... because...（週2）'},
+  {id:29, name:'SEL自我覺察主題週',   date:'2025-09-15', type:'SEL', desc:'全校自我覺察週活動（週4-5）'},
+  {id:30, name:'SEL情緒紅綠燈',       date:'2025-09-22', type:'SEL', desc:'用紅黃綠卡表達心情+英語詞彙（週5）'},
+  {id:31, name:'SEL自我管理主題週',   date:'2025-10-01', type:'SEL', desc:'雙語合作解謎遊戲（週6）'},
+  {id:32, name:'SEL社會覺察主題週',   date:'2025-10-13', type:'SEL', desc:'社會覺察主題開始（週8）'},
+  {id:33, name:'SEL雙語感謝牆',       date:'2025-11-17', type:'SEL', desc:'Thank you for...（週12）'},
+  {id:34, name:'SEL關係技巧主題週',   date:'2025-11-24', type:'SEL', desc:'關係技巧：溝通與合作（週13）'},
+  {id:35, name:'SEL雙語合作展覽',     date:'2025-12-22', type:'SEL', desc:'We learned... 我們學到...（週17）'},
+  {id:36, name:'SEL期末課程分享',     date:'2026-01-14', type:'SEL', desc:'下午期末SEL校本課程成果分享'},
+  // 進修
+  {id:37, name:'週三進修',             date:'2025-08-27', type:'進修', desc:'送府核定進修活動'},
+  // ── 辰光行事曆（Google Calendar 同步·114下）──
+  {id:38,  name:'衛生所健康飲食宣講',         date:'2026-03-05', type:'行政', src:'gcal', desc:'衛生所到校健康飲食宣講'},
+  {id:39,  name:'期初領域小組會議紀錄提交',   date:'2026-03-10', type:'行政', src:'gcal', desc:'各領域期初會議紀錄上傳系統'},
+  {id:40,  name:'教職員工X光體檢',            date:'2026-03-11', type:'行政', src:'gcal', desc:'全體教職員工X光胸腔健康檢查'},
+  {id:41,  name:'寒假作業展（第1天）',         date:'2026-03-17', type:'活動', src:'gcal', desc:'寒假作業展覽，第1天'},
+  {id:42,  name:'寒假作業展（第2天）/武術評鑑',date:'2026-03-18', type:'活動', src:'gcal', desc:'寒假作業展第2天；武術社評鑑'},
+  {id:43,  name:'週三進修-廟宇文化巡禮',       date:'2026-03-18', type:'進修', src:'gcal', desc:'週三進修：在地文化廟宇巡禮參訪'},
+  {id:44,  name:'戶外教育-草屯/雲林綠芽',      date:'2026-03-20', type:'活動', src:'gcal', desc:'各年級戶外教育：草屯鎮、雲林綠芽生態農場'},
+  {id:45,  name:'兒童美術比賽',                date:'2026-03-25', type:'活動', src:'gcal', desc:'縣/鎮兒童美術比賽'},
+  {id:46,  name:'親職座談會',                  date:'2026-03-28', type:'活動', src:'gcal', desc:'114下親職座談暨班親座談'},
+  {id:47,  name:'鎮模範兒童頒獎典禮',          date:'2026-03-28', type:'行政', src:'gcal', desc:'鄉鎮模範兒童頒獎表揚'},
+  {id:48,  name:'校內兒童節活動',              date:'2026-04-01', type:'活動', src:'gcal', desc:'校內兒童節慶祝活動'},
+  {id:49,  name:'縣模範兒童表揚',              date:'2026-04-01', type:'行政', src:'gcal', desc:'縣政府模範兒童表揚典禮'},
+  {id:50,  name:'期中試卷提交',                date:'2026-04-13', type:'考試', src:'gcal', desc:'各科期中評量試卷提交審核'},
+  {id:51,  name:'期中評量（第1天）',            date:'2026-04-23', type:'考試', src:'gcal', desc:'114下各年級期中評量，第1天'},
+  {id:52,  name:'期中評量（第2天）',            date:'2026-04-24', type:'考試', src:'gcal', desc:'114下各年級期中評量，第2天'},
+  {id:53,  name:'跳繩比賽',                    date:'2026-04-28', type:'活動', src:'gcal', desc:'全校跳繩比賽（個人/班級競賽）'},
+  {id:54,  name:'期中後教學檢討',              date:'2026-04-28', type:'行政', src:'gcal', desc:'期中評量後教學檢討會議'},
+  {id:55,  name:'學習扶助篩選（起）',           date:'2026-05-01', type:'行政', src:'gcal', desc:'5/1-5/30 學習扶助學生篩選期間'},
+  {id:56,  name:'母親節音樂發表會',             date:'2026-05-08', type:'活動', src:'gcal', desc:'母親節親子音樂成果發表會'},
+  {id:57,  name:'畢業班試卷提交',              date:'2026-05-18', type:'考試', src:'gcal', desc:'六年級畢業班評量試卷提交'},
+  {id:58,  name:'畢業班評量/學力檢測（第1天）', date:'2026-05-28', type:'考試', src:'gcal', desc:'六年級畢業班評量暨學力檢測，第1天'},
+  {id:59,  name:'畢業班評量/學力檢測（第2天）', date:'2026-05-29', type:'考試', src:'gcal', desc:'六年級畢業班評量暨學力檢測，第2天'},
+  {id:60,  name:'畢業班評量後檢討',            date:'2026-06-02', type:'行政', src:'gcal', desc:'畢業班評量後教學檢討會議'},
+  {id:61,  name:'縣長獎/期末試卷提交',          date:'2026-06-15', type:'行政', src:'gcal', desc:'縣長獎申請截止；期末試卷提交審核'},
+  {id:62,  name:'畢業典禮',                    date:'2026-06-18', type:'活動', src:'gcal', desc:'114學年度辰光國小畢業典禮'},
+  {id:63,  name:'期末評量（第1天）',            date:'2026-06-25', type:'考試', src:'gcal', desc:'114下各年級期末評量，第1天'},
+  {id:64,  name:'期末評量（第2天）',            date:'2026-06-26', type:'考試', src:'gcal', desc:'114下各年級期末評量，第2天'},
+  {id:65,  name:'期末後檢討提交',              date:'2026-06-29', type:'行政', src:'gcal', desc:'期末教學檢討紀錄提交'},
+  // ── 校長個人行事曆（Google Calendar 同步·與校務相關）──
+  {id:66,  name:'斗六教研SEL參訪',             date:'2026-03-03', type:'SEL',  src:'gcal-personal', desc:'斗六教研中心SEL課程參訪交流'},
+  {id:67,  name:'週三進修-數位教學/書法',        date:'2026-03-04', type:'進修', src:'gcal-personal', desc:'數位教學策略暨書法教學工作坊'},
+  {id:68,  name:'週三進修-全縣共備(一)',         date:'2026-03-11', type:'進修', src:'gcal-personal', desc:'全縣領域共備工作坊，第1場'},
+  {id:69,  name:'週三進修-兒童權利公約',         date:'2026-03-18', type:'進修', src:'gcal-personal', desc:'兒童權利公約教育宣導研習'},
+  {id:70,  name:'外師訪視',                    date:'2026-03-19', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視評核'},
+  {id:71,  name:'週三進修-班級經營',             date:'2026-03-25', type:'進修', src:'gcal-personal', desc:'班級經營策略研習'},
+  {id:72,  name:'宏崙國小SEL參訪',             date:'2026-03-27', type:'SEL',  src:'gcal-personal', desc:'宏崙國小SEL課程參訪交流'},
+  {id:73,  name:'週三進修-正向管教',             date:'2026-04-01', type:'進修', src:'gcal-personal', desc:'正向管教策略研習'},
+  {id:74,  name:'週三進修-全縣共備(二)',         date:'2026-04-08', type:'進修', src:'gcal-personal', desc:'全縣領域共備工作坊，第2場'},
+  {id:75,  name:'外師訪視',                    date:'2026-04-14', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視評核（第2次）'},
+  {id:76,  name:'週三進修-五校策略聯盟',         date:'2026-04-22', type:'進修', src:'gcal-personal', desc:'五校策略聯盟交流進修'},
+  {id:77,  name:'水燦林SEL參訪',               date:'2026-04-22', type:'SEL',  src:'gcal-personal', desc:'水燦林SEL課程參訪交流'},
+];
+];
+
+// ── 真實學生名冊（來源：114學年度第2學期各班成績表.xlsx）──
+const STUDENT_ROSTER = [
+  // 1年甲班
+  {cls:'1年甲班',gradeNum:1,seat:1,sid:'114001',name:'許維文'},
+  {cls:'1年甲班',gradeNum:1,seat:2,sid:'114002',name:'許維仁'},
+  {cls:'1年甲班',gradeNum:1,seat:3,sid:'114003',name:'許孟峰'},
+  {cls:'1年甲班',gradeNum:1,seat:4,sid:'114004',name:'黃亦忻'},
+  {cls:'1年甲班',gradeNum:1,seat:5,sid:'114005',name:'黃亦孜'},
+  {cls:'1年甲班',gradeNum:1,seat:6,sid:'114006',name:'薛筑尹'},
+  {cls:'1年甲班',gradeNum:1,seat:7,sid:'114008',name:'蔡幼汝'},
+  {cls:'1年甲班',gradeNum:1,seat:8,sid:'114010',name:'陳宇浩'},
+  // 2年甲班
+  {cls:'2年甲班',gradeNum:2,seat:1,sid:'113001',name:'黃宥傑'},
+  {cls:'2年甲班',gradeNum:2,seat:2,sid:'113002',name:'李姀妤'},
+  {cls:'2年甲班',gradeNum:2,seat:3,sid:'113003',name:'李宥臻'},
+  {cls:'2年甲班',gradeNum:2,seat:4,sid:'113004',name:'許雅婷'},
+  {cls:'2年甲班',gradeNum:2,seat:5,sid:'113005',name:'王馨巧'},
+  {cls:'2年甲班',gradeNum:2,seat:6,sid:'113006',name:'黃姿予'},
+  {cls:'2年甲班',gradeNum:2,seat:7,sid:'113007',name:'陳巧苓'},
+  // 3年甲班
+  {cls:'3年甲班',gradeNum:3,seat:1,sid:'112001',name:'王晨安'},
+  {cls:'3年甲班',gradeNum:3,seat:2,sid:'112002',name:'吳雲蓁'},
+  {cls:'3年甲班',gradeNum:3,seat:3,sid:'112003',name:'張瑄芸'},
+  {cls:'3年甲班',gradeNum:3,seat:4,sid:'112004',name:'郭佑士'},
+  {cls:'3年甲班',gradeNum:3,seat:5,sid:'112005',name:'李丞恩'},
+  // 4年甲班
+  {cls:'4年甲班',gradeNum:4,seat:1,sid:'111001',name:'王智弘'},
+  {cls:'4年甲班',gradeNum:4,seat:2,sid:'111002',name:'王玄龍'},
+  {cls:'4年甲班',gradeNum:4,seat:3,sid:'111003',name:'戴妍安'},
+  // 5年甲班
+  {cls:'5年甲班',gradeNum:5,seat:1,sid:'110001',name:'徐秉科'},
+  {cls:'5年甲班',gradeNum:5,seat:2,sid:'110003',name:'張瑋祐'},
+  {cls:'5年甲班',gradeNum:5,seat:3,sid:'110005',name:'張哲瑜'},
+  {cls:'5年甲班',gradeNum:5,seat:4,sid:'110006',name:'林恩璽'},
+  {cls:'5年甲班',gradeNum:5,seat:5,sid:'110007',name:'施宥妍'},
+  {cls:'5年甲班',gradeNum:5,seat:6,sid:'110008',name:'吳庭宇'},
+  // 6年甲班
+  {cls:'6年甲班',gradeNum:6,seat:1,sid:'109001',name:'施宥宇'},
+  {cls:'6年甲班',gradeNum:6,seat:2,sid:'109002',name:'韓劼宸'},
+  {cls:'6年甲班',gradeNum:6,seat:3,sid:'109004',name:'陳伊諾'},
+];
+const ALL_CLASSES = ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班'];
+const SUBJECTS_LOW  = ['國語','數學','生活','體育','藝術'];      // 1-2年級
+const SUBJECTS_MID  = ['國語','數學','英語','自然','社會','體育','藝術']; // 3-4年級
+const SUBJECTS_HIGH = ['國語','數學','英語','自然','社會','體育','藝術']; // 5-6年級
+
+let grades = []; // {id, sid, cls, name, year, semester, stage, subject, score, note}
+let gradeNextId = 1;
+let currentGradeClass = '1年甲班';
+let currentGradeYear = '114';
+let currentGradeSemester = '2';
+let currentGradeStage = '1'; // '1'|'2'|'final'
+
+let adminTasks = [
+  {id:1,name:'114學年度課程計畫送審',owner:'教務主任',due:`${yy}-09-15`,priority:'高',status:'已完成',progress:100,desc:''},
+  {id:2,name:'教評會委員選舉',owner:'校長室',due:`${yy}-${mm}-20`,priority:'高',status:'進行中',progress:60,desc:'委員選舉及公告'},
+  {id:3,name:'校舍安全設施檢查',owner:'總務主任',due:`${yy}-${mm}-30`,priority:'中',status:'待辦',progress:0,desc:''},
+  {id:4,name:'班親會活動規劃',owner:'訓導主任',due:`${yy}-${mm}-25`,priority:'中',status:'進行中',progress:40,desc:''},
+  {id:5,name:'教師甄選公告',owner:'校長室',due:`${yy}-11-01`,priority:'高',status:'待辦',progress:0,desc:''},
+  {id:6,name:'學生健康資料建檔',owner:'衛生組長',due:`${yy}-${mm}-15`,priority:'低',status:'已完成',progress:100,desc:''},
+  {id:7,name:'圖書館藏書盤點',owner:'圖書組長',due:`${yy}-11-30`,priority:'低',status:'待辦',progress:0,desc:''},
+];
+
+let trainings = [
+  {id:1,name:'差異化教學工作坊',teacher:'李老師, 王老師, 張老師',type:'教學研究',date:`${yy}-09-10`,hours:6,org:'教育局',status:'已完成',note:''},
+  {id:2,name:'資訊融入教學研習',teacher:'陳老師, 林老師',type:'資訊應用',date:`${yy}-10-05`,hours:3,org:'輔導團',status:'已完成',note:''},
+  {id:3,name:'特殊生輔導策略工作坊',teacher:'吳老師',type:'特教知能',date:`${yy}-${mm}-18`,hours:6,org:'特教中心',status:'已報名',note:''},
+  {id:4,name:'班級經營策略研習',teacher:'黃老師, 蔡老師, 楊老師',type:'輔導知能',date:`${yy}-11-05`,hours:3,org:'教育局',status:'已報名',note:''},
+  {id:5,name:'行政人員法規研習',teacher:'教務主任, 訓導主任',type:'行政研習',date:`${yy}-09-25`,hours:4,org:'教育局',status:'已完成',note:''},
+];
+
+// ── 教職員名冊 ──
+let staffList = [
+  {id:1, name:'黃雅玲', gender:'女', unit:'教導處', title:'教師兼教導處教導主任', rank:'教師', birth:'0531022', age:58,
+   edu:'國立中正大學教育學系碩士畢業', startDate:'0780801', currentDate:'1010801',
+   salary:'650薪點', phone:'05-7825638 / 0919050682',
+   exp:'辰光國小教師、口湖鄉成龍國民小學教師兼教導主任、雲林縣口湖鄉金湖國民小學教師',
+   addr:'雲林縣口湖港西村中路77之3號', note:''},
+  {id:2, name:'陳英曉', gender:'男', unit:'總務處', title:'教師兼總務處總務主任', rank:'教師', birth:'0610308', age:51,
+   edu:'國立中正大學戰略暨國際事務研究所碩士畢業', startDate:'0900801', currentDate:'0930801',
+   salary:'650薪點', phone:'05-7824285 / 0921546075',
+   exp:'辰光國小教師、臺北市文山區興德國民小學教師',
+   addr:'雲林縣北港鎮文仁路235號', note:''},
+  {id:3, name:'蔡幸華', gender:'女', unit:'教導處', title:'教師兼教導處教務組長', rank:'教師', birth:'0600207', age:52,
+   edu:'國立嘉義大學初等教育學系大學畢業', startDate:'0840801', currentDate:'0910801',
+   salary:'625薪點', phone:'05-7839795',
+   exp:'辰光國小教師、雲林縣四湖鄉東光國民小學教師、澎湖縣七美鄉七美國民小學教師',
+   addr:'雲林縣北港鎮新街里慶華街157巷38號', note:''},
+  {id:4, name:'林瑞芳', gender:'女', unit:'教導處', title:'代理教師兼教導處訓導組長', rank:'代理教師', birth:'0611001', age:50,
+   edu:'私立輔仁大學經濟學系大學畢業', startDate:'0860830', currentDate:'1110801',
+   salary:'190薪點', phone:'05-2838193 / 0952153547',
+   exp:'辰光國小代理教師、雲林縣北港鎮辰光國民小學代理教師（多次）',
+   addr:'嘉義市西區頭港里2鄰玉山路1000巷2之1號', note:''},
+  {id:5, name:'周貞妮', gender:'女', unit:'教導處', title:'教師', rank:'教師', birth:'0781108', age:33,
+   edu:'國立臺中教育大學台灣語文學系大學畢業', startDate:'1021101', currentDate:'1110801',
+   salary:'275薪點', phone:'0920578118',
+   exp:'辰光國小教師、桃園市中壢區信義國民小學教師、臺中市大甲區日南國民小學代理教師',
+   addr:'雲林縣虎尾中興1-1號', note:''},
+  {id:6, name:'王怡文', gender:'男', unit:'教導處', title:'教師', rank:'教師', birth:'0610617', age:51,
+   edu:'國立屏東師範學院數理教育學系大學畢業', startDate:'0850801', currentDate:'1050801',
+   salary:'625薪點', phone:'05-7811175 / 0919554368',
+   exp:'辰光國小教師、雲林縣北港鎮好收國民小學教師兼導師、嘉義縣布袋鎮新岑國民小學教師兼教導主任',
+   addr:'嘉義縣六腳鄉崙陽村11鄰崙子195號', note:''},
+  {id:7, name:'黃于玲', gender:'女', unit:'教導處', title:'教師兼教導處導師', rank:'教師', birth:'0710305', age:41,
+   edu:'國立臺南師範學院體育學系大學畢業', startDate:'0940801', currentDate:'1060801',
+   salary:'475薪點', phone:'05-7922517 / 0911100018',
+   exp:'辰光國小教師、雲林縣水林鄉蕉松國民小學教師',
+   addr:'雲林縣北港鎮好收庄路39-2號', note:''},
+  {id:8, name:'王瑞明', gender:'男', unit:'教導處', title:'教師兼教導處導師兼總務', rank:'教師', birth:'0521012', age:59,
+   edu:'私立中原大學數學系大學畢業', startDate:'0800801', currentDate:'0990801',
+   salary:'625薪點', phone:'05-7838584 / 0910-378584',
+   exp:'辰光國小教師兼導師、雲林縣元長鄉客厝國民小學教師、雲林縣水林鄉蕉松國民小學教師',
+   addr:'雲林縣北港鎮草勝伯街51號', note:''},
+  {id:9, name:'張曉鈴', gender:'女', unit:'教導處', title:'教師兼教導處導師', rank:'教師', birth:'0620407', age:50,
+   edu:'國立政治大學地政學系大學畢業', startDate:'0890801', currentDate:'1010801',
+   salary:'575薪點', phone:'0937922855',
+   exp:'辰光國小教師兼教導處導師、嘉義市林森國民小學教師兼衛生組長、花蓮縣花蓮市國福國民小學教師',
+   addr:'嘉義市西區護忠路103號', note:''},
+  {id:10, name:'陳永芝', gender:'女', unit:'教導處', title:'代理教師', rank:'代理教師', birth:'0661107', age:45,
+   edu:'真理大學應用外語系大學畢業', startDate:'0950831', currentDate:'1110829',
+   salary:'170薪點', phone:'0932589909',
+   exp:'辰光國小代理教師、雲林縣北辰國民小學代理教師、雲林縣北港鎮育英國民小學代理教師',
+   addr:'雲林縣北港鎮東暘里6鄰民生路28之1號', note:''},
+  {id:11, name:'蔡淑真', gender:'女', unit:'教導處', title:'護理師', rank:'士(生)級或師(三)級', birth:'0550902', age:56,
+   edu:'大同技術學院社會工作與服務管理系大學畢業', startDate:'0890905', currentDate:'0970401',
+   salary:'師(三)級年功俸12級590點', phone:'05-7830338 / 0930019081',
+   exp:'辰光國小護理師、雲林縣口湖鄉衛生所護士、雲林縣口湖鄉衛生所護士',
+   addr:'雲林縣北港鎮復里20鄰大同路351之2號3樓', note:'職編W610010'},
+  {id:12, name:'陳建村', gender:'男', unit:'總務處', title:'工友', rank:'無資位', birth:'0530915', age:58,
+   edu:'私立南開工商專科學校五專畢業', startDate:'0880710', currentDate:'0880710',
+   salary:'150點', phone:'',
+   exp:'辰光國小工友',
+   addr:'雲林縣北港鎮大同路176號', note:''},
+];
+let nextStaffId = 13;
+let editingStaffId = null;
+
+// SEL 課程資料
+const SEL_DOMAINS = ['自我覺察','自我管理','社會覺察','人際技巧','負責任決策'];
+const SEL_GRADE_GROUPS = ['低年級（1-2年級）','中年級（3-4年級）','高年級（5-6年級）','全校'];
+
+let selCourses = [
+  {id:1,name:'認識我的情緒',domain:'自我覺察',gradeGroup:'低年級（1-2年級）',date:`${yy}-09-06`,sessions:4,teacher:'李老師',goal:'讓學生能辨識並命名基本情緒',activity:'情緒卡片遊戲、繪本討論',status:'已完成',note:''},
+  {id:2,name:'情緒調節小達人',domain:'自我管理',gradeGroup:'低年級（1-2年級）',date:`${yy}-10-04`,sessions:4,teacher:'李老師',goal:'學習深呼吸、正向自我對話等調節策略',activity:'角色扮演、情境模擬',status:'已完成',note:''},
+  {id:3,name:'同理心大冒險',domain:'社會覺察',gradeGroup:'中年級（3-4年級）',date:`${yy}-09-13`,sessions:4,teacher:'王老師',goal:'培養理解他人立場與感受的能力',activity:'觀點取替活動、小組討論',status:'已完成',note:''},
+  {id:4,name:'團隊合作我最棒',domain:'人際技巧',gradeGroup:'中年級（3-4年級）',date:`${yy}-10-11`,sessions:4,teacher:'王老師',goal:'學習傾聽、協商與合作技巧',activity:'團隊任務、合作遊戲',status:'進行中',note:''},
+  {id:5,name:'理性思考做決定',domain:'負責任決策',gradeGroup:'高年級（5-6年級）',date:`${yy}-${mm}-14`,sessions:6,teacher:'張老師',goal:'培養分析情境、評估後果的決策能力',activity:'案例分析、辯論活動',status:'已報名',note:''},
+];
+
+let nextId = { events: 38, grades: 11, admin: 8, training: 6, sel: 6 };
+let editingId = { events: null, grades: null, admin: null, training: null, sel: null };
+let calYear = today.getFullYear(), calMonth = today.getMonth();
+let activeGradeFilter = '全部';
+let activeAdminFilter = 'all';
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='calendar') renderCalendar();
+  if(id==='grades') renderGradePage();
+  if(id==='admin') renderAdminTable();
+  if(id==='training') renderTrainingPage();
+  if(id==='sel') renderSelPage();
+  if(id==='drive') renderDrivePage();
+  if(id==='staff') renderStaffPage();
+}
+
+function printPage() { window.print(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function fmtDate(d) {
+  if(!d) return '-';
+  const [y,m,day] = d.split('-');
+  return `${y}/${m}/${day}`;
+}
+function scoreGrade(s) {
+  if(s>=90) return {label:'優',cls:'score-a'};
+  if(s>=80) return {label:'甲',cls:'score-b'};
+  if(s>=70) return {label:'乙',cls:'score-c'};
+  return {label:'丙',cls:'score-d'};
+}
+function priorityBadge(p) {
+  if(p==='高') return '<span class="badge badge-red">高</span>';
+  if(p==='中') return '<span class="badge badge-yellow">中</span>';
+  return '<span class="badge badge-gray">低</span>';
+}
+function statusBadge(s) {
+  const m={待辦:'badge-gray',進行中:'badge-blue',已完成:'badge-green',已報名:'badge-yellow',取消:'badge-red'};
+  return `<span class="badge ${m[s]||'badge-gray'}">${s}</span>`;
+}
+function confirmDel(fn) { if(confirm('確定要刪除此筆資料？')) fn(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  // Top cards
+  const pending = adminTasks.filter(t=>t.status!=='已完成').length;
+  const upcoming = events.filter(e=>e.date>=today.toISOString().slice(0,10)).length;
+  const totalHours = trainings.filter(t=>t.status==='已完成').reduce((a,b)=>a+b.hours,0);
+  const avgScore = grades.length ? Math.round(grades.reduce((a,b)=>a+b.score,0)/grades.length) : 0;
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dbeafe">📅</div>
+      <div class="stat-info"><div class="label">近期活動</div><div class="value">${upcoming}</div><div class="sub">待辦行程</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7">📋</div>
+      <div class="stat-info"><div class="label">行政業務</div><div class="value">${pending}</div><div class="sub">未完成業務</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5">📝</div>
+      <div class="stat-info"><div class="label">成績平均</div><div class="value">${avgScore}</div><div class="sub">全校平均分數</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ede9fe">👩‍🏫</div>
+      <div class="stat-info"><div class="label">教職員人數</div><div class="value">${staffList.length}</div><div class="sub">全校教職員</div></div>
+    </div>`;
+
+  // Upcoming events
+  const now = today.toISOString().slice(0,10);
+  const upcoming5 = events.filter(e=>e.date>=now).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  document.getElementById('dashEvents').innerHTML = upcoming5.length ?
+    upcoming5.map(e=>{
+      const [ey,em,ed] = e.date.split('-');
+      return `<div class="event-item">
+        <div class="event-date-box"><div class="mon">${months[+em-1]}月</div><div class="day">${+ed}</div></div>
+        <div class="event-info">
+          <div class="title">${e.name}</div>
+          <div class="meta"><span class="badge type-${e.type}" style="font-size:10px">${e.type}</span>${e.desc?' '+e.desc:''}</div>
+        </div></div>`;}).join('') :
+    '<div class="empty-state"><div class="icon">📅</div>近期無活動安排</div>';
+
+  // Pending tasks
+  const todo = adminTasks.filter(t=>t.status!=='已完成').slice(0,5);
+  document.getElementById('dashTasks').innerHTML = todo.length ?
+    todo.map(t=>`<div class="task-row">
+      <div class="task-check ${t.status==='已完成'?'done':''}" onclick="toggleTask(${t.id})">
+        ${t.status==='已完成'?'✓':''}
+      </div>
+      <div class="task-text">
+        <div class="task-title ${t.status==='已完成'?'done':''}">${t.name}</div>
+        <div class="task-meta">${t.owner} · 截止 ${fmtDate(t.due)} · ${priorityBadge(t.priority)}</div>
+      </div>
+      ${statusBadge(t.status)}
+    </div>`).join('') :
+    '<div class="empty-state" style="padding:20px">✅ 所有業務皆已完成</div>';
+
+  // Grade bar chart
+  const gradeNames = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+  const colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'];
+  const barData = gradeNames.map((g,i)=>{
+    const gs = grades.filter(gr=>gr.grade===g);
+    const avg = gs.length ? Math.round(gs.reduce((a,b)=>a+b.score,0)/gs.length) : 0;
+    return {label:g.replace('年級',''),avg,color:colors[i]};
+  });
+  const maxVal = Math.max(...barData.map(d=>d.avg), 1);
+  document.getElementById('dashChart').innerHTML = barData.map(d=>`
+    <div class="bar-wrap">
+      <div class="bar-val">${d.avg||'-'}</div>
+      <div class="bar" style="background:${d.color};height:${d.avg?(d.avg/maxVal*120+10):4}px"></div>
+      <div class="bar-label">${d.label}</div>
+    </div>`).join('');
+
+  // Training summary
+  const typeCount = {};
+  trainings.forEach(t=>{ typeCount[t.type]=(typeCount[t.type]||0)+t.hours; });
+  const tColors = {'教學研究':'#3b82f6','行政研習':'#10b981','輔導知能':'#f59e0b','資訊應用':'#8b5cf6','特教知能':'#ef4444','其他':'#94a3b8'};
+  document.getElementById('dashTraining').innerHTML = `
+    <ul class="summary-list">
+      ${Object.entries(typeCount).map(([k,v])=>`
+        <li><div class="dot" style="background:${tColors[k]||'#94a3b8'}"></div>
+        <span style="flex:1">${k}</span><strong>${v} 時</strong></li>`).join('')}
+    </ul>
+    <div style="margin-top:12px;font-size:13px;color:#64748b">
+      共 ${trainings.length} 場進修活動 ／ 已完成 ${trainings.filter(t=>t.status==='已完成').length} 場
+    </div>`;
+}
+
+function toggleTask(id) {
+  const t = adminTasks.find(t=>t.id===id);
+  if(!t) return;
+  t.status = t.status==='已完成' ? '待辦' : '已完成';
+  t.progress = t.status==='已完成' ? 100 : 0;
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CALENDAR
+// ═══════════════════════════════════════════════════════════════
+function renderCalendar() {
+  const months = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  document.getElementById('calTitle').textContent = `${calYear} 年 ${months[calMonth]}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = today.toISOString().slice(0,10);
+
+  let html = '';
+  let total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+  for(let i=0; i<total; i++) {
+    let d, isOther = false, mo = calMonth;
+    if(i < firstDay) { d = daysInPrev - firstDay + i + 1; isOther = true; mo = calMonth-1; }
+    else if(i >= firstDay + daysInMonth) { d = i - firstDay - daysInMonth + 1; isOther = true; mo = calMonth+1; }
+    else { d = i - firstDay + 1; }
+
+    const actualMonth = (isOther && i<firstDay) ? (calMonth===0?12:calMonth) : (isOther?((calMonth+2)>12?1:calMonth+2):(calMonth+1));
+    const dateStr = `${isOther&&i<firstDay?(calMonth===0?calYear-1:calYear):calYear}-${String(actualMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayEvents = events.filter(e=>e.date===dateStr);
+    const isToday = dateStr===todayStr;
+
+    html += `<div class="cal-day ${isOther?'other-month':''} ${isToday?'today':''}" onclick="openEventModal('${dateStr}')">
+      <div class="day-num">${d}</div>
+      ${dayEvents.slice(0,2).map(e=>`<div class="cal-event-dot type-${e.type}" title="${e.name}${e.src==='gcal'?' 📅':''}" style="${e.src==='gcal'?'border-left:2px solid #1a73e8;padding-left:4px':''}">${e.name}</div>`).join('')}
+      ${dayEvents.length>2?`<div style="font-size:10px;color:#64748b">+${dayEvents.length-2}</div>`:''}
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+  renderEventTable();
+  renderConflicts();
+}
+
+function renderEventTable() {
+  const monthEvents = events.filter(e=>{
+    const [y,m] = e.date.split('-');
+    return +y===calYear && +m===(calMonth+1);
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+
+  document.getElementById('eventTableBody').innerHTML = monthEvents.length ?
+    monthEvents.map(e=>`<tr>
+      <td>${fmtDate(e.date)}</td>
+      <td><strong>${e.name}</strong>${e.src==='gcal'?'<span title="來自 Google Calendar" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 GCal</span>':''}</td>
+      <td><span class="badge type-${e.type}">${e.type}</span></td>
+      <td style="color:#64748b">${e.desc||'-'}</td>
+      <td>
+        <button class="btn btn-warning btn-sm" onclick="editEvent(${e.id})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteEvent(${e.id}))">刪除</button>
+      </td></tr>`).join('') :
+    `<tr><td colspan="5" class="empty-state">本月尚無活動記錄</td></tr>`;
+}
+
+function renderConflicts() {
+  const importantTypes = new Set(['考試','活動']);
+  const importantKw = ['進修','畢業','典禮','評量','座談','表揚','頒獎','發表','體檢'];
+
+  const schoolEvts = events.filter(e => e.src !== 'gcal-personal');
+  const personalEvts = events.filter(e => e.src === 'gcal-personal');
+
+  const personalByDate = {};
+  personalEvts.forEach(e => {
+    if (!personalByDate[e.date]) personalByDate[e.date] = [];
+    personalByDate[e.date].push(e);
+  });
+
+  const conflicts = [];
+  Object.entries(personalByDate).forEach(([date, pEvts]) => {
+    const sEvts = schoolEvts.filter(e => e.date === date && (
+      importantTypes.has(e.type) || importantKw.some(kw => e.name.includes(kw))
+    ));
+    const doubleBook = pEvts.length >= 2;
+    if (sEvts.length > 0 || doubleBook) {
+      conflicts.push({ date, school: sEvts, personal: pEvts, doubleBook });
+    }
+  });
+  conflicts.sort((a,b) => a.date.localeCompare(b.date));
+
+  const panel = document.getElementById('conflictPanel');
+  const list  = document.getElementById('conflictList');
+  const cnt   = document.getElementById('conflictCount');
+  if (!panel) return;
+
+  if (conflicts.length === 0) { panel.style.display='none'; return; }
+  panel.style.display = 'block';
+  cnt.textContent = conflicts.length + ' 件';
+
+  const wd = ['日','一','二','三','四','五','六'];
+  list.innerHTML = conflicts.map(c => {
+    const dt = new Date(c.date + 'T00:00:00');
+    const dateLabel = fmtDate(c.date) + '（週' + wd[dt.getDay()] + '）';
+    const sHtml = c.school.map(e =>
+      '<span class="conflict-school">🏫 ' + e.name + '（' + e.type + '）</span>'
+    ).join('');
+    const pHtml = c.personal.map(e =>
+      '<span class="conflict-personal">👤 ' + e.name + '</span>'
+    ).join('');
+    let hint = '';
+    if (c.doubleBook && c.school.length === 0)
+      hint = '<div class="conflict-hint">⚠ 個人行程同日雙重預約，請確認時段是否衝突</div>';
+    else if (c.doubleBook)
+      hint = '<div class="conflict-hint">⚠ 個人行程與學校重要活動衝突，且當日個人行程已有多項</div>';
+    else
+      hint = '<div class="conflict-hint">⚠ 請評估是否能兼顧或安排代理</div>';
+    return '<div class="conflict-row">' +
+      '<div class="conflict-date">📅 ' + dateLabel + '</div>' +
+      '<div style="flex:1">' + sHtml + (sHtml&&pHtml?'<br>':'') + pHtml + hint + '</div>' +
+      '</div>';
+  }).join('');
+
+  // mark conflict days on calendar grid with red outline
+  document.querySelectorAll('.conflict-day').forEach(el => el.classList.remove('conflict-day'));
+  conflicts.forEach(c => {
+    document.querySelectorAll('[onclick="openEventModal(\'' + c.date + '\')"]').forEach(el =>
+      el.classList.add('conflict-day')
+    );
+  });
+}
+
+function changeMonth(d) { calMonth+=d; if(calMonth<0){calMonth=11;calYear--;}else if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+function goToday() { calYear=today.getFullYear(); calMonth=today.getMonth(); renderCalendar(); }
+
+function openEventModal(dateStr) {
+  editingId.events = null;
+  document.getElementById('eventModalTitle').textContent = '新增活動';
+  document.getElementById('ev_name').value = '';
+  document.getElementById('ev_date').value = dateStr || today.toISOString().slice(0,10);
+  document.getElementById('ev_type').value = '行政';
+  document.getElementById('ev_desc').value = '';
+  document.getElementById('eventModal').classList.add('open');
+}
+function editEvent(id) {
+  const e = events.find(e=>e.id===id); if(!e) return;
+  editingId.events = id;
+  document.getElementById('eventModalTitle').textContent = '編輯活動';
+  document.getElementById('ev_name').value = e.name;
+  document.getElementById('ev_date').value = e.date;
+  document.getElementById('ev_type').value = e.type;
+  document.getElementById('ev_desc').value = e.desc;
+  document.getElementById('eventModal').classList.add('open');
+}
+function saveEvent() {
+  const name = document.getElementById('ev_name').value.trim();
+  const date = document.getElementById('ev_date').value;
+  if(!name||!date) { alert('請填寫活動名稱和日期！'); return; }
+  const obj = { name, date, type: document.getElementById('ev_type').value, desc: document.getElementById('ev_desc').value.trim() };
+  if(editingId.events) {
+    Object.assign(events.find(e=>e.id===editingId.events), obj);
+  } else {
+    obj.id = nextId.events++; events.push(obj);
+  }
+  closeModal('eventModal'); renderCalendar();
+  if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+}
+function deleteEvent(id) { events = events.filter(e=>e.id!==id); renderCalendar(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  GRADES  (重建版)
+// ═══════════════════════════════════════════════════════════════
+function scoreGradeLabel(s) {
+  if(s >= 90) return {label:'優',cls:'score-a',bc:'badge-green'};
+  if(s >= 80) return {label:'甲',cls:'score-b',bc:'badge-blue'};
+  if(s >= 70) return {label:'乙',cls:'score-c',bc:'badge-yellow'};
+  if(s >= 60) return {label:'丙',cls:'score-c',bc:'badge-yellow'};
+  return {label:'丁',cls:'score-d',bc:'badge-red'};
+}
+
+// ── 班級 Tabs ──
+function renderGradePage() {
+  currentGradeYear     = document.getElementById('gradeYear')?.value || currentGradeYear;
+  currentGradeSemester = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const tabs = ALL_CLASSES.map(c =>
+    `<button class="filter-btn ${c===currentGradeClass?'active':''}" onclick="setGradeClass('${c}')">
+      ${c}<span style="font-size:10px;margin-left:4px;opacity:0.7">${STUDENT_ROSTER.filter(s=>s.cls===c).length}人</span>
+    </button>`
+  ).join('');
+  document.getElementById('classTabs').innerHTML =
+    `<button class="filter-btn ${currentGradeClass==='全校'?'active':''}" onclick="setGradeClass('全校')">📊 全校</button>`+tabs;
+
+  const d = new Date(); const yyyy = d.getFullYear(); const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0');
+  if(document.getElementById('inputDate') && !document.getElementById('inputDate').value)
+    document.getElementById('inputDate').value = `${yyyy}-${mm}-${dd}`;
+  renderGradeView();
+}
+
+function setGradeClass(cls) {
+  currentGradeClass = cls;
+  renderGradePage();
+}
+
+function setGradeStage(s) {
+  currentGradeStage = s;
+  // Update tab button styles
+  ['1','2','final'].forEach(k => {
+    const btn = document.getElementById(k==='final'?'stageBtnFinal':`stageBtn${k}`);
+    if(!btn) return;
+    btn.style.background = k === s ? '#3b82f6' : '#f8fafc';
+    btn.style.color      = k === s ? '#fff'    : '#374151';
+  });
+  renderGradeView();
+}
+
+function renderGradeView() {
+  const isInput = currentGradeStage === '1' || currentGradeStage === '2';
+  document.getElementById('gradeViewInput').style.display = isInput ? '' : 'none';
+  document.getElementById('gradeViewFinal').style.display = isInput ? 'none' : '';
+  if(isInput) renderGradeInput();
+  else        renderGradeFinal();
+}
+
+// ── 批次輸入（第一 / 第二階段）──
+function renderGradeInput() {
+  const cls   = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+  const stage = currentGradeStage;
+  const stageLabel = stage === '1' ? '第一階段' : '第二階段';
+  const yr  = document.getElementById('gradeYear')?.value || currentGradeYear;
+  const sem = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  document.getElementById('inputPanelTitle').textContent =
+    `${yr}學年度 第${sem}學期 ${cls} ── ${stageLabel} 批次輸入`;
+  const subject = document.getElementById('inputSubject').value;
+  const roster  = STUDENT_ROSTER.filter(s => s.cls === cls);
+  document.getElementById('inputTableBody').innerHTML = roster.map(s => {
+    const existing = grades.find(g =>
+      g.sid===s.sid && g.subject===subject &&
+      g.year===yr && g.semester===sem && g.stage===stage
+    );
+    const sc  = existing ? existing.score : '';
+    const sg  = sc !== '' ? scoreGradeLabel(sc) : null;
+    return `<tr>
+      <td style="text-align:center;color:#94a3b8">${s.seat}</td>
+      <td style="font-size:12px;color:#94a3b8">${s.sid}</td>
+      <td style="font-weight:600">${s.name}</td>
+      <td>
+        <input type="number" id="sc_${s.sid}" value="${sc}"
+          min="0" max="100" class="form-control" style="width:110px;text-align:center;font-size:18px;font-weight:700;padding:4px 8px;${sc!==''&&sc<60?'border-color:#ef4444':'sc!==''?border-color:#10b981':''}"
+          oninput="updateRowGrade('${s.sid}')"
+          onkeydown="if(event.key==='Enter'){saveAllInputScores()}">
+      </td>
+      <td id="gd_${s.sid}" style="text-align:center">
+        ${sg ? `<span class="badge ${sg.bc}" style="font-size:14px">${sg.label}</span>` : ''}
+      </td>
+      <td><input type="text" id="note_${s.sid}" value="${existing?.note||''}"
+        class="form-control" style="font-size:12px" placeholder="備註"></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateRowGrade(sid) {
+  const raw = document.getElementById('sc_'+sid)?.value;
+  const sc  = parseFloat(raw);
+  const cell = document.getElementById('gd_'+sid);
+  if(raw !== '' && !isNaN(sc) && sc >= 0 && sc <= 100) {
+    const sg = scoreGradeLabel(sc);
+    cell.innerHTML = `<span class="badge ${sg.bc}" style="font-size:14px">${sg.label}</span>`;
+    document.getElementById('sc_'+sid).style.borderColor = sc>=60?'#10b981':'#ef4444';
+  } else {
+    cell.innerHTML = '';
+    document.getElementById('sc_'+sid).style.borderColor = '#d1d5db';
+  }
+}
+
+function saveAllInputScores() {
+  const cls     = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+  const subject = document.getElementById('inputSubject').value;
+  const date    = document.getElementById('inputDate').value;
+  const yr      = document.getElementById('gradeYear')?.value || currentGradeYear;
+  const sem     = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const stage   = currentGradeStage;
+  const roster  = STUDENT_ROSTER.filter(s => s.cls === cls);
+  let saved=0, skipped=0;
+  roster.forEach(s => {
+    const raw = document.getElementById('sc_'+s.sid)?.value;
+    const sc  = parseFloat(raw);
+    if(raw===''||raw===null||raw===undefined) { skipped++; return; }
+    if(isNaN(sc)||sc<0||sc>100) return;
+    const note = document.getElementById('note_'+s.sid)?.value||'';
+    const existing = grades.find(g =>
+      g.sid===s.sid && g.subject===subject &&
+      g.year===yr && g.semester===sem && g.stage===stage
+    );
+    if(existing) { existing.score=sc; existing.date=date; existing.note=note; }
+    else { grades.push({id:gradeNextId++,sid:s.sid,cls,name:s.name,year:yr,semester:sem,stage,subject,score:sc,date,note}); }
+    saved++;
+  });
+  const msg = document.createElement('div');
+  msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+  msg.textContent = `✅ 已儲存 ${saved} 筆成績${skipped?'（'+skipped+'筆空白跳過）':''}`;
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(), 3000);
+  renderGradeInput();
+}
+
+// ── 學期總成績 ──
+function renderGradeFinal() {
+  const cls  = currentGradeClass;
+  const yr   = document.getElementById('gradeYear')?.value || currentGradeYear;
+  const sem  = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const subjF = document.getElementById('filterFinalSubject')?.value || '';
+  document.getElementById('finalTitle').textContent =
+    `${yr}學年度 第${sem}學期 ${cls} ── 學期總成績`;
+  // Show formula note
+  const noteEl = document.getElementById('finalFormulaNote');
+  if(noteEl) noteEl.innerHTML =
+    `<span style="font-size:12px;color:#64748b;background:#f0fdf9;border:1px solid #a7f3d0;border-radius:6px;padding:4px 12px">
+      📐 學期總成績 ＝ （第一階段 ＋ 第二階段）÷ 2，取四捨五入整數
+    </span>`;
+
+  // Determine subjects in use for this class
+  const SUBJ_MAP = {
+    '1年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+    '2年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+    '3年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '4年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '5年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '6年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  };
+  const clsSubjects = cls === '全校'
+    ? ['國語','數學','社會','自然','英語','生活','體育','音樂','視覺藝術']
+    : (SUBJ_MAP[cls] || ['國語','數學']);
+  const showSubjects = subjF ? [subjF] : clsSubjects;
+
+  // Filter grades
+  const baseFilter = g => g.year===yr && g.semester===sem && (cls==='全校'||g.cls===cls);
+
+  // Build header: 座號|姓名|科目1(第一|第二|學期)|...|總平均
+  let thHtml = '<tr style="background:#1e3a5f;color:#fff">' +
+    '<th style="padding:8px;white-space:nowrap">座號</th>' +
+    '<th style="padding:8px;white-space:nowrap">姓名</th>';
+  showSubjects.forEach(s => {
+    thHtml += `<th colspan="3" style="padding:8px;text-align:center;border-left:2px solid #2e5090">${s}</th>`;
+  });
+  thHtml += '<th style="padding:8px;text-align:center;border-left:2px solid #c0392b">總平均</th></tr>';
+
+  let th2Html = '<tr style="background:#2e5090;color:#fff;font-size:11px">' +
+    '<th></th><th></th>';
+  showSubjects.forEach(() => {
+    th2Html += '<th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd;white-space:nowrap">第一</th>' +
+               '<th style="padding:4px 6px;text-align:center;white-space:nowrap">第二</th>' +
+               '<th style="padding:4px 6px;text-align:center;white-space:nowrap">學期</th>';
+  });
+  th2Html += '<th style="padding:4px 6px;text-align:center;border-left:2px solid #c0392b">分數</th></tr>';
+
+  document.getElementById('finalTableHead').innerHTML = thHtml + th2Html;
+
+  // Get roster
+  const roster = cls === '全校' ? STUDENT_ROSTER : STUDENT_ROSTER.filter(s => s.cls === cls);
+
+  // Build grade lookup: sid → subject → stage → score
+  const lookup = {};
+  grades.filter(baseFilter).forEach(g => {
+    if(!lookup[g.sid]) lookup[g.sid] = {};
+    if(!lookup[g.sid][g.subject]) lookup[g.sid][g.subject] = {};
+    lookup[g.sid][g.subject][g.stage] = g.score;
+  });
+
+  const rows = roster.map(st => {
+    let totalSum = 0; let totalCnt = 0;
+    let cells = '';
+    showSubjects.forEach(s => {
+      const s1 = lookup[st.sid]?.[s]?.['1'];
+      const s2 = lookup[st.sid]?.[s]?.['2'];
+      const rawAvg = (s1!==undefined && s2!==undefined) ? (s1+s2)/2 : (s1!==undefined?s1:s2);
+      const avg = rawAvg !== undefined ? Math.round(rawAvg) : undefined;
+      const fmtScore = v => v !== undefined
+        ? `<span class="${scoreGradeLabel(v).cls}" style="font-weight:700">${v}</span>`
+        : '<span style="color:#cbd5e1">—</span>';
+      const fmtAvg = v => v !== undefined
+        ? (() => { const sg=scoreGradeLabel(v); return `<strong style="color:${sg.cls==='score-a'?'#059669':sg.cls==='score-b'?'#2563eb':sg.cls==='score-d'?'#dc2626':'#d97706'}">${v}</strong><span class="badge ${sg.bc}" style="font-size:10px;margin-left:3px">${sg.label}</span>`; })()
+        : '<span style="color:#cbd5e1">—</span>';
+      if(avg !== undefined) { totalSum += avg; totalCnt++; }
+      cells += `<td style="text-align:center;padding:6px 4px;border-left:2px solid #e2e8f0">${fmtScore(s1)}</td>
+                <td style="text-align:center;padding:6px 4px">${fmtScore(s2)}</td>
+                <td style="text-align:center;padding:6px 8px;background:${avg!==undefined?'#eff6ff':'#f8fafc'}">${fmtAvg(avg)}</td>`;
+    });
+    const grandAvg = totalCnt > 0 ? Math.round(totalSum/totalCnt) : undefined;
+    const gaHtml = grandAvg !== undefined
+      ? `<strong style="font-size:16px">${grandAvg}</strong>`
+      : '<span style="color:#cbd5e1">—</span>';
+    return `<tr style="border-bottom:1px solid #e2e8f0">
+      <td style="text-align:center;color:#94a3b8;padding:6px">${st.seat}</td>
+      <td style="padding:6px 10px;font-weight:700;white-space:nowrap">${st.name}</td>
+      ${cells}
+      <td style="text-align:center;padding:6px;background:#fff9f0;border-left:2px solid #fbbf24">${gaHtml}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('finalTableBody').innerHTML = rows ||
+    '<tr><td colspan="99" class="empty-state" style="padding:30px">尚無成績資料，請先在第一階段或第二階段輸入分數</td></tr>';
+}
+
+function deleteGradeEntry(id) { grades=grades.filter(g=>g.id!==id); renderGradeView(); }
+
+
+// ═══════════════════════════════════════════════════════════════
+//  EXCEL IMPORT / EXPORT  (SheetJS)
+// ═══════════════════════════════════════════════════════════════
+function importFromExcel(input) {
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      let hdrIdx = rows.findIndex(r => r.includes('姓名'));
+      if(hdrIdx < 0) { alert('找不到標題列（含「姓名」欄）'); input.value=''; return; }
+      const hdr = rows[hdrIdx];
+      const skip = new Set(['班級','座號','學號','姓名','總分','']);
+      const subjCols = [];
+      hdr.forEach((h, ci) => {
+        if(!skip.has(String(h).trim()) && !String(h).includes('等第')) {
+          subjCols.push({name: String(h).trim(), ci});
+        }
+      });
+      if(subjCols.length === 0) { alert('找不到科目欄位'); input.value=''; return; }
+      const nameCI  = hdr.findIndex(h => h==='姓名');
+      const sidCI   = hdr.findIndex(h => String(h)==='學號');
+      const subject = document.getElementById('inputSubject').value;
+      const date    = document.getElementById('inputDate').value;
+      const yr      = document.getElementById('gradeYear')?.value || currentGradeYear;
+      const sem     = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+      const stage   = currentGradeStage;
+      let imported = 0, skipped = 0;
+      for(let ri = hdrIdx+1; ri < rows.length; ri++) {
+        const row = rows[ri];
+        if(!row[nameCI]) continue;
+        const name = String(row[nameCI]).trim();
+        const sidRaw = sidCI >= 0 ? String(row[sidCI]).trim() : '';
+        let stu = STUDENT_ROSTER.find(s => s.sid === sidRaw);
+        if(!stu) stu = STUDENT_ROSTER.find(s => s.name === name);
+        if(!stu) { skipped++; continue; }
+        const subjectMatch = subjCols.find(sc => sc.name === subject);
+        const useCol = subjectMatch ? subjectMatch.ci : subjCols[0].ci;
+        const raw = row[useCol];
+        const sc = parseFloat(raw);
+        if(raw === '' || raw === null || isNaN(sc) || sc < 0 || sc > 100) { skipped++; continue; }
+        const cls = stu.cls;
+        const existing = grades.find(g =>
+          g.sid===stu.sid && g.subject===subject &&
+          g.year===yr && g.semester===sem && g.stage===stage
+        );
+        if(existing) { existing.score=sc; existing.date=date; }
+        else { grades.push({id:gradeNextId++,sid:stu.sid,cls,name:stu.name,year:yr,semester:sem,stage,subject,score:sc,date,note:''}); }
+        imported++;
+      }
+      const msg = document.createElement('div');
+      msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#3b82f6;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+      msg.innerHTML = `📥 <strong>Excel 匯入完成</strong><br>已匯入 ${imported} 筆${skipped?'，跳過 '+skipped+' 筆':''}`;
+      document.body.appendChild(msg);
+      setTimeout(()=>msg.remove(), 4000);
+      input.value = '';
+      renderGradeView();
+    } catch(err) { alert('讀取 Excel 失敗：' + err.message); input.value=''; }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportToExcel() {
+  const cls = currentGradeClass === '全校' ? null : currentGradeClass;
+  const subject = document.getElementById('inputSubject').value;
+  const roster = cls ? STUDENT_ROSTER.filter(s => s.cls === cls) : STUDENT_ROSTER;
+  const SUBJ_MAP = {
+    '1年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+    '2年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+    '3年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '4年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '5年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+    '6年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  };
+  const yr    = document.getElementById('gradeYear')?.value || currentGradeYear;
+  const sem   = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const stage = currentGradeStage;
+  const stageLabel = stage === '1' ? '第一階段' : stage === '2' ? '第二階段' : '學期總成績';
+  const gradeMap = {};
+  grades.forEach(g => {
+    if(cls && g.cls !== cls) return;
+    if(g.year !== yr || g.semester !== sem) return;
+    if(stage !== 'final' && g.stage !== stage) return;
+    if(!gradeMap[g.sid]) gradeMap[g.sid] = {};
+    if(stage === 'final') {
+      if(!gradeMap[g.sid][g.subject]) gradeMap[g.sid][g.subject] = {};
+      gradeMap[g.sid][g.subject][g.stage] = g.score;
+    } else {
+      gradeMap[g.sid][g.subject] = g.score;
+    }
+  });
+  const subjects = cls ? (SUBJ_MAP[cls] || [subject]) : [subject];
+  const hdr = ['班級','座號','學號','姓名'];
+  subjects.forEach(s => { hdr.push(s); hdr.push(s+'等第'); });
+  hdr.push('總分');
+  const dataRows = roster.map(st => {
+    const row = [st.cls, st.seat, st.sid, st.name];
+    let total = 0; let cnt = 0;
+    subjects.forEach(s => {
+      const sc = gradeMap[st.sid]?.[s];
+      row.push(sc !== undefined ? sc : '');
+      const gl = sc !== undefined ? (sc>=90?'優':sc>=80?'甲':sc>=70?'乙':sc>=60?'丙':'丁') : '';
+      row.push(gl);
+      if(sc !== undefined) { total += sc; cnt++; }
+    });
+    row.push(cnt > 0 ? total : '');
+    return row;
+  });
+  const title = `雲林縣北港鎮辰光國民小學 ${yr}學年度 第${sem}學期 ${cls||'全校'} ${stageLabel} 成績表`;
+  const wbOut = XLSX.utils.book_new();
+  const wsData = [[title], hdr, ...dataRows];
+  const wsOut = XLSX.utils.aoa_to_sheet(wsData);
+  wsOut['!cols'] = [{wch:10},{wch:5},{wch:9},{wch:9},...subjects.flatMap(()=>[{wch:8},{wch:6}]),{wch:8}];
+  wsOut['!merges'] = [{s:{r:0,c:0},e:{r:0,c:hdr.length-1}}];
+  XLSX.utils.book_append_sheet(wbOut, wsOut, '成績表');
+  const filename = `${yr}學年度第${sem}學期_${cls||'全校'}_${stageLabel}_成績表.xlsx`;
+  XLSX.writeFile(wbOut, filename);
+  const msg = document.createElement('div');
+  msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+  msg.innerHTML = `📤 <strong>已匯出：${filename}</strong>`;
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(), 3500);
+}
+
+// ── keep old modal stubs to avoid errors ──
+function openGradeModal(){}
+function saveGrade(){}
+function deleteGrade(id){ deleteGradeEntry(id); }
+
+// ═══════════════════════════════════════════════════════════════
+//  ADMIN TASKS
+// ═══════════════════════════════════════════════════════════════
+function renderAdminTable() {
+  let data = [...adminTasks];
+  if(activeAdminFilter!=='all') data = data.filter(t=>t.status===activeAdminFilter);
+  data.sort((a,b)=>{
+    const p={高:0,中:1,低:2}; return p[a.priority]-p[b.priority]||(a.due||'').localeCompare(b.due||'');
+  });
+  document.getElementById('adminTableBody').innerHTML = data.length ?
+    data.map(t=>{
+      const prog = t.progress||0;
+      const pColor = prog>=80?'#10b981':prog>=40?'#f59e0b':'#3b82f6';
+      return `<tr>
+        <td><strong>${t.name}</strong>${t.desc?`<br><span style="font-size:12px;color:#64748b">${t.desc}</span>`:''}</td>
+        <td>${t.owner}</td>
+        <td>${fmtDate(t.due)}</td>
+        <td>${priorityBadge(t.priority)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td style="min-width:100px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:3px">${prog}%</div>
+          <div class="progress-bg"><div class="progress-fill" style="width:${prog}%;background:${pColor}"></div></div>
+        </td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editAdmin(${t.id})">編輯</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteAdmin(${t.id}))">刪除</button>
+        </td></tr>`;
+    }).join('') :
+    '<tr><td colspan="7" class="empty-state">尚無業務資料</td></tr>';
+}
+function filterAdmin(f, el) {
+  activeAdminFilter = f;
+  document.querySelectorAll('#page-admin .filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderAdminTable();
+}
+function openAdminModal() {
+  editingId.admin = null;
+  document.getElementById('adminModalTitle').textContent = '新增行政業務';
+  ['ad_name','ad_owner','ad_desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ad_due').value = '';
+  document.getElementById('ad_priority').value = '高';
+  document.getElementById('ad_status').value = '待辦';
+  document.getElementById('ad_progress').value = 0;
+  document.getElementById('adminModal').classList.add('open');
+}
+function editAdmin(id) {
+  const t = adminTasks.find(t=>t.id===id); if(!t) return;
+  editingId.admin = id;
+  document.getElementById('adminModalTitle').textContent = '編輯行政業務';
+  document.getElementById('ad_name').value = t.name;
+  document.getElementById('ad_owner').value = t.owner;
+  document.getElementById('ad_due').value = t.due||'';
+  document.getElementById('ad_priority').value = t.priority;
+  document.getElementById('ad_status').value = t.status;
+  document.getElementById('ad_progress').value = t.progress||0;
+  document.getElementById('ad_desc').value = t.desc||'';
+  document.getElementById('adminModal').classList.add('open');
+}
+function saveAdmin() {
+  const name = document.getElementById('ad_name').value.trim();
+  const owner = document.getElementById('ad_owner').value.trim();
+  if(!name||!owner) { alert('請填寫業務名稱和負責人！'); return; }
+  const obj = {
+    name, owner, due:document.getElementById('ad_due').value,
+    priority:document.getElementById('ad_priority').value, status:document.getElementById('ad_status').value,
+    progress:+document.getElementById('ad_progress').value, desc:document.getElementById('ad_desc').value.trim()
+  };
+  if(editingId.admin) { Object.assign(adminTasks.find(t=>t.id===editingId.admin), obj); }
+  else { obj.id = nextId.admin++; adminTasks.push(obj); }
+  closeModal('adminModal'); renderAdminTable();
+}
+function deleteAdmin(id) { adminTasks = adminTasks.filter(t=>t.id!==id); renderAdminTable(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  TRAINING
+// ═══════════════════════════════════════════════════════════════
+function renderTrainingPage() {
+  const total = trainings.length;
+  const done = trainings.filter(t=>t.status==='已完成').length;
+  const hours = trainings.filter(t=>t.status==='已完成').reduce((a,b)=>a+b.hours,0);
+  document.getElementById('trainingStats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dbeafe">🎓</div>
+      <div class="stat-info"><div class="label">進修場次</div><div class="value">${total}</div><div class="sub">總場數</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5">✅</div>
+      <div class="stat-info"><div class="label">已完成</div><div class="value">${done}</div><div class="sub">完成場次</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7">⏱️</div>
+      <div class="stat-info"><div class="label">研習時數</div><div class="value">${hours}</div><div class="sub">累積時數</div></div>
+    </div>`;
+  renderTrainingTable();
+}
+function renderTrainingTable() {
+  const typeF = document.getElementById('trainingFilter').value;
+  let data = typeF ? trainings.filter(t=>t.type===typeF) : [...trainings];
+  data.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('trainingTableBody').innerHTML = data.length ?
+    data.map(t=>`<tr>
+      <td><strong>${t.name}</strong></td>
+      <td style="font-size:13px">${t.teacher}</td>
+      <td><span class="badge badge-blue">${t.type}</span></td>
+      <td>${fmtDate(t.date)}</td>
+      <td><strong>${t.hours}</strong> 時</td>
+      <td>${t.org||'-'}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>
+        <button class="btn btn-warning btn-sm" onclick="editTraining(${t.id})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteTraining(${t.id}))">刪除</button>
+      </td></tr>`).join('') :
+    '<tr><td colspan="8" class="empty-state">尚無進修活動資料</td></tr>';
+}
+function openTrainingModal() {
+  editingId.training = null;
+  document.getElementById('trainingModalTitle').textContent = '新增進修活動';
+  ['tr_name','tr_teacher','tr_org','tr_note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tr_date').value = today.toISOString().slice(0,10);
+  document.getElementById('tr_hours').value = 3;
+  document.getElementById('tr_type').value = '教學研究';
+  document.getElementById('tr_status').value = '已報名';
+  document.getElementById('trainingModal').classList.add('open');
+}
+function editTraining(id) {
+  const t = trainings.find(t=>t.id===id); if(!t) return;
+  editingId.training = id;
+  document.getElementById('trainingModalTitle').textContent = '編輯進修活動';
+  document.getElementById('tr_name').value = t.name;
+  document.getElementById('tr_teacher').value = t.teacher;
+  document.getElementById('tr_type').value = t.type;
+  document.getElementById('tr_date').value = t.date;
+  document.getElementById('tr_hours').value = t.hours;
+  document.getElementById('tr_org').value = t.org||'';
+  document.getElementById('tr_status').value = t.status;
+  document.getElementById('tr_note').value = t.note||'';
+  document.getElementById('trainingModal').classList.add('open');
+}
+function saveTraining() {
+  const name = document.getElementById('tr_name').value.trim();
+  const teacher = document.getElementById('tr_teacher').value.trim();
+  const hours = +document.getElementById('tr_hours').value;
+  if(!name||!teacher) { alert('請填寫活動名稱和參與教師！'); return; }
+  if(!hours||hours<=0) { alert('請填寫有效時數！'); return; }
+  const obj = {
+    name, teacher, type:document.getElementById('tr_type').value,
+    date:document.getElementById('tr_date').value, hours,
+    org:document.getElementById('tr_org').value.trim(), status:document.getElementById('tr_status').value,
+    note:document.getElementById('tr_note').value.trim()
+  };
+  if(editingId.training) { Object.assign(trainings.find(t=>t.id===editingId.training), obj); }
+  else { obj.id = nextId.training++; trainings.push(obj); }
+  closeModal('trainingModal'); renderTrainingPage();
+}
+function deleteTraining(id) { trainings = trainings.filter(t=>t.id!==id); renderTrainingPage(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  SEL
+// ═══════════════════════════════════════════════════════════════
+const SEL_DOMAIN_COLORS = {
+  '自我覺察':'#3b82f6','自我管理':'#10b981','社會覺察':'#f59e0b',
+  '人際技巧':'#8b5cf6','負責任決策':'#ef4444'
+};
+const SEL_STATUS_BADGE = {已完成:'badge-green',進行中:'badge-blue',已報名:'badge-yellow',規劃中:'badge-gray'};
+
+function renderSelPage() {
+  // Stats
+  const total = selCourses.length;
+  const done = selCourses.filter(s=>s.status==='已完成').length;
+  const inprog = selCourses.filter(s=>s.status==='進行中').length;
+  const totalSessions = selCourses.reduce((a,b)=>a+b.sessions,0);
+  document.getElementById('selStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon" style="background:#ccfbf1">💚</div>
+      <div class="stat-info"><div class="label">課程總數</div><div class="value">${total}</div><div class="sub">本學期</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#d1fae5">✅</div>
+      <div class="stat-info"><div class="label">已完成</div><div class="value">${done}</div><div class="sub">課程</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">📖</div>
+      <div class="stat-info"><div class="label">進行中</div><div class="value">${inprog}</div><div class="sub">課程</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">⏰</div>
+      <div class="stat-info"><div class="label">總節數</div><div class="value">${totalSessions}</div><div class="sub">節課</div></div></div>`;
+  renderSelTable();
+  renderSelProgress();
+  renderSelCalList();
+}
+
+function renderSelTable() {
+  const df = document.getElementById('selDomainFilter').value;
+  const gf = document.getElementById('selGradeFilter').value;
+  const sf = document.getElementById('selStatusFilter').value;
+  let data = [...selCourses];
+  if(df) data = data.filter(s=>s.domain===df);
+  if(gf) data = data.filter(s=>s.gradeGroup===gf);
+  if(sf) data = data.filter(s=>s.status===sf);
+  document.getElementById('selTableBody').innerHTML = data.length ?
+    data.map(s=>`<tr>
+      <td><strong>${s.name}</strong></td>
+      <td><span class="badge" style="background:${SEL_DOMAIN_COLORS[s.domain]}22;color:${SEL_DOMAIN_COLORS[s.domain]}">${s.domain}</span></td>
+      <td style="font-size:13px">${s.gradeGroup}</td>
+      <td>${s.teacher}</td>
+      <td>${fmtDate(s.date)}</td>
+      <td><strong>${s.sessions}</strong> 節</td>
+      <td><span class="badge ${SEL_STATUS_BADGE[s.status]||'badge-gray'}">${s.status}</span></td>
+      <td style="font-size:12px;color:#64748b;max-width:180px">${s.goal||'-'}</td>
+      <td>
+        <button class="btn btn-warning btn-sm" onclick="editSel(${s.id})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteSel(${s.id}))">刪除</button>
+      </td></tr>`).join('') :
+    '<tr><td colspan="9" class="empty-state">尚無課程資料</td></tr>';
+}
+
+function renderSelProgress() {
+  const html = SEL_DOMAINS.map(d=>{
+    const dc = selCourses.filter(s=>s.domain===d);
+    const doneCnt = dc.filter(s=>s.status==='已完成').length;
+    const pct = dc.length ? Math.round(doneCnt/dc.length*100) : 0;
+    const color = SEL_DOMAIN_COLORS[d];
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-weight:600;font-size:14px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px"></span>${d}</span>
+        <span style="font-size:13px;color:#64748b">${doneCnt}/${dc.length} 課程完成 (${pct}%)</span>
+      </div>
+      <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('selProgress').innerHTML = html;
+}
+
+function renderSelCalList() {
+  const selEvts = events.filter(e=>e.type==='SEL').sort((a,b)=>a.date.localeCompare(b.date));
+  const now = today.toISOString().slice(0,10);
+  const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  document.getElementById('selCalList').innerHTML = selEvts.length ?
+    `<div style="display:flex;flex-wrap:wrap;gap:12px">`+
+    selEvts.map(e=>{
+      const [ey,em,ed] = e.date.split('-');
+      const isPast = e.date<now;
+      return `<div style="background:${isPast?'#f8fafc':'#f0fdf9'};border:1px solid ${isPast?'#e2e8f0':'#99f6e4'};border-radius:10px;padding:14px 16px;min-width:180px;max-width:220px">
+        <div style="font-size:12px;color:#64748b">${ey}年${+em}月${+ed}日</div>
+        <div style="font-weight:700;font-size:15px;margin:4px 0">${e.name}</div>
+        <div style="font-size:12px;color:#64748b">${e.desc||''}</div>
+        <div style="margin-top:8px"><span class="badge type-SEL">SEL</span> ${isPast?'<span class="badge badge-gray" style="font-size:10px">已過期</span>':''}</div>
+      </div>`;
+    }).join('')+'</div>' :
+    '<div class="empty-state">尚無 SEL 行事曆活動，請至學校行事曆新增類型為 SEL 的活動</div>';
+}
+
+function openSelModal() {
+  editingId.sel = null;
+  document.getElementById('selModalTitle').textContent = '新增 SEL 課程';
+  ['sel_name','sel_teacher','sel_goal','sel_activity','sel_note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sel_date').value = today.toISOString().slice(0,10);
+  document.getElementById('sel_sessions').value = 4;
+  document.getElementById('sel_domain').value = '自我覺察';
+  document.getElementById('sel_gradeGroup').value = '低年級（1-2年級）';
+  document.getElementById('sel_status').value = '規劃中';
+  document.getElementById('selModal').classList.add('open');
+}
+function editSel(id) {
+  const s = selCourses.find(s=>s.id===id); if(!s) return;
+  editingId.sel = id;
+  document.getElementById('selModalTitle').textContent = '編輯 SEL 課程';
+  document.getElementById('sel_name').value = s.name;
+  document.getElementById('sel_domain').value = s.domain;
+  document.getElementById('sel_gradeGroup').value = s.gradeGroup;
+  document.getElementById('sel_teacher').value = s.teacher;
+  document.getElementById('sel_date').value = s.date;
+  document.getElementById('sel_sessions').value = s.sessions;
+  document.getElementById('sel_status').value = s.status;
+  document.getElementById('sel_goal').value = s.goal||'';
+  document.getElementById('sel_activity').value = s.activity||'';
+  document.getElementById('sel_note').value = s.note||'';
+  document.getElementById('selModal').classList.add('open');
+}
+function saveSel() {
+  const name = document.getElementById('sel_name').value.trim();
+  const teacher = document.getElementById('sel_teacher').value.trim();
+  if(!name||!teacher) { alert('請填寫課程名稱和授課教師！'); return; }
+  const obj = {
+    name, domain:document.getElementById('sel_domain').value,
+    gradeGroup:document.getElementById('sel_gradeGroup').value,
+    teacher, date:document.getElementById('sel_date').value,
+    sessions:+document.getElementById('sel_sessions').value||4,
+    status:document.getElementById('sel_status').value,
+    goal:document.getElementById('sel_goal').value.trim(),
+    activity:document.getElementById('sel_activity').value.trim(),
+    note:document.getElementById('sel_note').value.trim()
+  };
+  if(editingId.sel) { Object.assign(selCourses.find(s=>s.id===editingId.sel), obj); }
+  else { obj.id = nextId.sel++; selCourses.push(obj); }
+  closeModal('selModal'); renderSelPage();
+}
+function deleteSel(id) { selCourses = selCourses.filter(s=>s.id!==id); renderSelPage(); }
+
+// Also add SEL events from selCourses to calendar events automatically
+// (Done via explicit SEL-type events in the events array)
+
+// ═══════════════════════════════════════════════════════════════
+//  STAFF ROSTER
+// ═══════════════════════════════════════════════════════════════
+const TITLE_COLORS = {
+  '主任':'#1d4ed8','組長':'#0891b2','教師':'#059669',
+  '代理教師':'#d97706','護理師':'#7c3aed','工友':'#64748b'
+};
+const AVATAR_BG = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#0f766e','#b45309','#c026d3','#0369a1','#65a30d','#9f1239'];
+
+function getTitleType(title) {
+  if(title.includes('主任')) return '主任';
+  if(title.includes('組長')) return '組長';
+  if(title.includes('代理教師')) return '代理教師';
+  if(title.includes('護理師')) return '護理師';
+  if(title.includes('工友')) return '工友';
+  return '教師';
+}
+
+// 民國年月日（7碼 YYYMMDD）→ JS Date
+function rocToDate(roc) {
+  if(!roc || roc.length < 6) return null;
+  try {
+    const s = roc.replace(/\D/g,'');
+    if(s.length === 7) {
+      const y = parseInt(s.substring(0,3)) + 1911;
+      const m = parseInt(s.substring(3,5)) - 1;
+      const d = parseInt(s.substring(5,7));
+      return new Date(y, m, d);
+    } else if(s.length === 6) {
+      const y = parseInt(s.substring(0,2)) + 1911;
+      const m = parseInt(s.substring(2,4)) - 1;
+      const d = parseInt(s.substring(4,6));
+      return new Date(y, m, d);
+    }
+  } catch(e) {}
+  return null;
+}
+// 民國日期顯示
+function rocDisplay(roc) {
+  const d = rocToDate(roc); if(!d) return roc||'-';
+  const ry = d.getFullYear() - 1911;
+  return `民${ry}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+// 西元日期顯示
+function adDisplay(roc) {
+  const d = rocToDate(roc); if(!d) return '';
+  return `(${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')})`;
+}
+// 年齡計算
+function calcAge(roc) {
+  const d = rocToDate(roc); if(!d) return '-';
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const mDiff = now.getMonth() - d.getMonth();
+  if(mDiff < 0 || (mDiff === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+// 服務年資
+function calcYears(roc) {
+  const d = rocToDate(roc); if(!d) return '-';
+  const now = new Date();
+  const yrs = now.getFullYear() - d.getFullYear();
+  return yrs > 0 ? `${yrs}年` : '未滿1年';
+}
+// 距今生日（今年或明年）天數
+function daysUntilBirthday(roc) {
+  const d = rocToDate(roc); if(!d) return 9999;
+  const now = new Date(); now.setHours(0,0,0,0);
+  let next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+  if(next < now) next = new Date(now.getFullYear()+1, d.getMonth(), d.getDate());
+  return Math.round((next - now) / 86400000);
+}
+// 生日標示
+function birthdayTag(roc) {
+  const days = daysUntilBirthday(roc);
+  if(days === 0) return '<span class="badge badge-red" style="animation:pulse 1s infinite">🎂 今天生日！</span>';
+  if(days <= 7)  return `<span class="badge badge-red">🎁 ${days}天後</span>`;
+  if(days <= 30) return `<span class="badge badge-yellow">🎂 ${days}天後</span>`;
+  return `<span style="font-size:12px;color:#94a3b8">${days}天後</span>`;
+}
+
+let staffViewMode = 'table'; // 'table' | 'card'
+function toggleStaffView() {
+  staffViewMode = staffViewMode === 'table' ? 'card' : 'table';
+  document.getElementById('staffViewBtn').textContent = staffViewMode === 'table' ? '🃏 卡片視圖' : '📋 表格視圖';
+  document.getElementById('staffTablePanel').style.display = staffViewMode === 'table' ? '' : 'none';
+  document.getElementById('staffCardGrid').style.display = staffViewMode === 'card' ? 'grid' : 'none';
+  renderStaff();
+}
+
+function getFilteredStaff() {
+  const unitF = document.getElementById('staffUnitFilter')?.value || '';
+  const typeF = document.getElementById('staffTypeFilter')?.value || '';
+  const sortF = document.getElementById('staffSortFilter')?.value || 'default';
+  const searchF = (document.getElementById('staffSearch')?.value || '').trim();
+  let data = staffList.filter(s => {
+    if(unitF && s.unit !== unitF) return false;
+    if(typeF && getTitleType(s.title) !== typeF) return false;
+    if(searchF && !s.name.includes(searchF) && !s.title.includes(searchF) && !(s.edu||'').includes(searchF)) return false;
+    return true;
+  });
+  if(sortF === 'birthday') data.sort((a,b) => daysUntilBirthday(a.birth) - daysUntilBirthday(b.birth));
+  else if(sortF === 'name') data.sort((a,b) => a.name.localeCompare(b.name,'zh-TW'));
+  else if(sortF === 'salary') {
+    data.sort((a,b) => {
+      const sa = parseInt((a.salary||'').replace(/\D/g,'')) || 0;
+      const sb = parseInt((b.salary||'').replace(/\D/g,'')) || 0;
+      return sb - sa;
+    });
+  }
+  return data;
+}
+
+function renderStaff() {
+  if(staffViewMode === 'table') renderStaffTable();
+  else renderStaffCards();
+}
+
+function renderStaffPage() {
+  // Stats
+  const total = staffList.length;
+  const fullTeachers = staffList.filter(s=>getTitleType(s.title)==='教師').length;
+  const subTeachers = staffList.filter(s=>getTitleType(s.title)==='代理教師').length;
+  const adminStaff = staffList.filter(s=>['主任','組長'].includes(getTitleType(s.title))).length;
+  const others = staffList.filter(s=>['護理師','工友'].includes(getTitleType(s.title))).length;
+
+  document.getElementById('staffStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">👥</div>
+      <div class="stat-info"><div class="label">教職員總數</div><div class="value">${total}</div><div class="sub">全校員工</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#d1fae5">👩‍🏫</div>
+      <div class="stat-info"><div class="label">正式教師</div><div class="value">${fullTeachers}</div><div class="sub">含兼行政</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">📋</div>
+      <div class="stat-info"><div class="label">代理教師</div><div class="value">${subTeachers}</div><div class="sub">代理/代課</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#ede9fe">🏛️</div>
+      <div class="stat-info"><div class="label">行政主管</div><div class="value">${adminStaff}</div><div class="sub">主任/組長</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#fce7f3">🩺</div>
+      <div class="stat-info"><div class="label">職員/工友</div><div class="value">${others}</div><div class="sub">護理師/工友</div></div></div>`;
+
+  // Birthday banner
+  const upcoming = staffList
+    .map(s => ({ ...s, days: daysUntilBirthday(s.birth) }))
+    .filter(s => s.days <= 30)
+    .sort((a,b) => a.days - b.days);
+
+  if(upcoming.length > 0) {
+    const items = upcoming.map(s => {
+      const d = rocToDate(s.birth);
+      const mm = d ? `${d.getMonth()+1}/${d.getDate()}` : '';
+      const label = s.days === 0 ? '今天🎂' : `${s.days}天後`;
+      return `<span style="background:rgba(255,255,255,0.25);border-radius:8px;padding:4px 10px;white-space:nowrap">
+        <strong>${s.name}</strong>（${s.title}）${mm} ─ ${label}
+      </span>`;
+    }).join('');
+    document.getElementById('birthdayBanner').innerHTML = `
+      <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border-radius:12px;padding:14px 18px">
+        <div style="font-weight:700;margin-bottom:8px;font-size:15px">🎂 近30天生日提醒</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${items}</div>
+      </div>`;
+  } else {
+    document.getElementById('birthdayBanner').innerHTML =
+      '<div style="background:#f1f5f9;border-radius:10px;padding:12px 16px;font-size:13px;color:#64748b">🎂 近30天內無教職員生日</div>';
+  }
+
+  renderStaff();
+  renderBirthdayCalendar();
+}
+
+function renderStaffTable() {
+  const data = getFilteredStaff();
+  document.getElementById('staffCount').textContent = `共 ${data.length} 人`;
+  document.getElementById('staffTableCount').textContent = `共 ${data.length} 筆`;
+  document.getElementById('staffTableBody').innerHTML = data.length ?
+    data.map((s,i) => {
+      const type = getTitleType(s.title);
+      const col = TITLE_COLORS[type] || '#64748b';
+      const age = calcAge(s.birth);
+      const yrs = calcYears(s.startDate);
+      const bdTag = birthdayTag(s.birth);
+      return `<tr>
+        <td style="text-align:center;color:#94a3b8;font-size:12px">${i+1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:32px;height:32px;border-radius:50%;background:${AVATAR_BG[s.id%AVATAR_BG.length]};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">${s.name[0]}</div>
+            <strong>${s.name}</strong>
+          </div>
+        </td>
+        <td style="text-align:center">${s.gender==='女'?'♀️':'♂️'} ${s.gender}</td>
+        <td style="white-space:nowrap"><span class="badge" style="background:${col}18;color:${col}">${s.title}</span></td>
+        <td style="font-size:12px">${s.unit}</td>
+        <td style="font-size:12px;color:#64748b">${s.rank||'-'}</td>
+        <td style="white-space:nowrap;font-size:12px">
+          <div>${rocDisplay(s.birth)}</div>
+          <div style="color:#94a3b8;font-size:11px">${adDisplay(s.birth)}</div>
+        </td>
+        <td style="text-align:center;font-weight:700">${age}</td>
+        <td style="white-space:nowrap">${bdTag}</td>
+        <td style="font-size:12px;white-space:nowrap">${rocDisplay(s.startDate)}</td>
+        <td style="font-size:12px;white-space:nowrap;text-align:center">${yrs}</td>
+        <td style="font-size:12px;max-width:150px;word-break:break-all">${s.edu||'-'}</td>
+        <td style="white-space:nowrap"><span class="badge" style="background:${col}18;color:${col}">${s.salary||'-'}</span></td>
+        <td style="font-size:12px;white-space:nowrap">${[s.phone,s.mobile].filter(Boolean).join('<br>')||'-'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-warning btn-sm" onclick="editStaff(${s.id})">✏️ 編輯</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteStaff(${s.id}))">🗑</button>
+        </td></tr>`;
+    }).join('') :
+    '<tr><td colspan="15" class="empty-state" style="padding:30px">無符合條件的教職員</td></tr>';
+}
+
+function renderStaffCards() {
+  const data = getFilteredStaff();
+  document.getElementById('staffCount').textContent = `共 ${data.length} 人`;
+  document.getElementById('staffCardGrid').innerHTML = data.map((s,i) => {
+    const type = getTitleType(s.title);
+    const col = TITLE_COLORS[type] || '#64748b';
+    const age = calcAge(s.birth);
+    const d = rocToDate(s.birth);
+    const birthStr = d ? `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}` : '-';
+    const days = daysUntilBirthday(s.birth);
+    const bdHighlight = days <= 30 ? `border: 2px solid ${days===0?'#ef4444':'#f59e0b'}` : '';
+    return `<div class="panel" style="margin-bottom:0;${bdHighlight}">
+      <div style="padding:18px">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+          <div style="width:48px;height:48px;border-radius:50%;background:${AVATAR_BG[s.id%AVATAR_BG.length]};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0">${s.name[0]}</div>
+          <div style="flex:1">
+            <div style="font-size:16px;font-weight:700">${s.name} <span style="font-size:13px;color:#64748b">${s.gender}</span></div>
+            <div style="margin-top:3px"><span class="badge" style="background:${col}18;color:${col};font-size:11px">${s.title}</span></div>
+          </div>
+          ${days<=30?`<div style="background:${days===0?'#fee2e2':'#fef3c7'};border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:${days===0?'#991b1b':'#92400e'};text-align:center">${days===0?'🎂今天':'🎂'+days+'天'}</div>`:''}
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:12px">
+          <span style="color:#94a3b8">單位</span><span>${s.unit}</span>
+          <span style="color:#94a3b8">職系</span><span>${s.rank||'-'}</span>
+          <span style="color:#94a3b8">生日</span><span>${rocDisplay(s.birth)} <span style="color:#94a3b8">${adDisplay(s.birth)}</span></span>
+          <span style="color:#94a3b8">年齡</span><span><strong>${age}</strong> 歲</span>
+          <span style="color:#94a3b8">初任</span><span>${rocDisplay(s.startDate)}</span>
+          <span style="color:#94a3b8">年資</span><span>${calcYears(s.startDate)}</span>
+          <span style="color:#94a3b8">薪點</span><span><strong>${s.salary||'-'}</strong></span>
+          <span style="color:#94a3b8">電話</span><span>${[s.phone,s.mobile].filter(Boolean).join(' / ')||'-'}</span>
+        </div>
+        ${s.edu?`<div style="margin-top:8px;font-size:11px;color:#64748b;background:#f8fafc;border-radius:6px;padding:6px 8px">🎓 ${s.edu}</div>`:''}
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-warning btn-sm" style="flex:1" onclick="editStaff(${s.id})">✏️ 編輯</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteStaff(${s.id}))">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state" style="grid-column:1/-1;padding:40px">無符合條件的教職員</div>';
+}
+
+function renderBirthdayCalendar() {
+  const MONTHS = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  const byMonth = Array.from({length:12}, () => []);
+  staffList.forEach(s => {
+    const d = rocToDate(s.birth);
+    if(d) byMonth[d.getMonth()].push({...s, bday:d.getDate()});
+  });
+  const nowMonth = today.getMonth();
+  const html = MONTHS.map((mn, mi) => {
+    const ppl = byMonth[mi].sort((a,b)=>a.bday-b.bday);
+    const isNow = mi === nowMonth;
+    return `<div style="display:inline-block;vertical-align:top;background:${isNow?'#eff6ff':'#f8fafc'};border:${isNow?'1px solid #bfdbfe':'1px solid #e2e8f0'};border-radius:10px;padding:12px 14px;margin:6px;min-width:120px">
+      <div style="font-weight:700;font-size:13px;color:${isNow?'#1d4ed8':'#374151'};margin-bottom:8px">${mn}${isNow?' 📍':''}</div>
+      ${ppl.length ?
+        ppl.map(p => {
+          const days = daysUntilBirthday(p.birth);
+          const isBday = days === 0;
+          const isSoon = days <= 7;
+          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;${isBday?'background:#fee2e2;border-radius:6px;padding:2px 4px;':isSoon?'background:#fef3c7;border-radius:6px;padding:2px 4px;':''}">
+            <span style="font-size:11px;font-weight:700;color:${isBday?'#dc2626':isSoon?'#d97706':'#94a3b8'};min-width:20px">${p.bday}日</span>
+            <span style="font-size:12px;font-weight:600">${p.name}</span>
+            ${isBday?'🎂':isSoon?'🎁':''}
+          </div>`;
+        }).join('') :
+        '<div style="font-size:12px;color:#cbd5e1">—</div>'
+      }
+    </div>`;
+  }).join('');
+  document.getElementById('birthdayCalendar').innerHTML = html;
+}
+
+function openStaffModal() {
+  editingStaffId = null;
+  document.getElementById('staffModalTitle').textContent = '新增教職員';
+  document.getElementById('sfDeleteBtn').style.display = 'none';
+  ['sf_name','sf_title','sf_rank','sf_birth','sf_idno','sf_edu','sf_startDate',
+   'sf_curUnit','sf_currentDate','sf_salary','sf_phone','sf_mobile','sf_exp','sf_addr','sf_note'
+  ].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('sf_gender').value = '女';
+  document.getElementById('sf_unit').value = '教導處';
+  document.getElementById('staffModal').classList.add('open');
+}
+function editStaff(id) {
+  const s = staffList.find(s=>s.id===id); if(!s) return;
+  editingStaffId = id;
+  document.getElementById('staffModalTitle').textContent = `編輯 — ${s.name}`;
+  document.getElementById('sfDeleteBtn').style.display = 'block';
+  document.getElementById('sf_name').value = s.name||'';
+  document.getElementById('sf_gender').value = s.gender||'女';
+  document.getElementById('sf_unit').value = s.unit||'教導處';
+  document.getElementById('sf_title').value = s.title||'';
+  document.getElementById('sf_rank').value = s.rank||'';
+  document.getElementById('sf_birth').value = s.birth||'';
+  document.getElementById('sf_idno').value = s.idno||'';
+  document.getElementById('sf_edu').value = s.edu||'';
+  document.getElementById('sf_startDate').value = s.startDate||'';
+  document.getElementById('sf_curUnit').value = s.curUnit||'';
+  document.getElementById('sf_currentDate').value = s.currentDate||'';
+  document.getElementById('sf_salary').value = s.salary||'';
+  document.getElementById('sf_phone').value = s.phone||'';
+  document.getElementById('sf_mobile').value = s.mobile||'';
+  document.getElementById('sf_exp').value = s.exp||'';
+  document.getElementById('sf_addr').value = s.addr||'';
+  document.getElementById('sf_note').value = s.note||'';
+  document.getElementById('staffModal').classList.add('open');
+}
+function saveStaff() {
+  const name = document.getElementById('sf_name').value.trim();
+  const title = document.getElementById('sf_title').value.trim();
+  if(!name) { alert('請填寫姓名！'); return; }
+  if(!title) { alert('請填寫職稱！'); return; }
+  const birth = document.getElementById('sf_birth').value.trim();
+  if(birth && !/^\d{6,7}$/.test(birth)) { alert('出生年月日請填寫6或7位數字（民國年月日）'); return; }
+  const obj = {
+    name, gender:document.getElementById('sf_gender').value,
+    unit:document.getElementById('sf_unit').value, title,
+    rank:document.getElementById('sf_rank').value.trim(), birth,
+    idno:document.getElementById('sf_idno').value.trim(),
+    edu:document.getElementById('sf_edu').value.trim(),
+    startDate:document.getElementById('sf_startDate').value.trim(),
+    curUnit:document.getElementById('sf_curUnit').value.trim(),
+    currentDate:document.getElementById('sf_currentDate').value.trim(),
+    salary:document.getElementById('sf_salary').value.trim(),
+    phone:document.getElementById('sf_phone').value.trim(),
+    mobile:document.getElementById('sf_mobile').value.trim(),
+    exp:document.getElementById('sf_exp').value.trim(),
+    addr:document.getElementById('sf_addr').value.trim(),
+    note:document.getElementById('sf_note').value.trim()
+  };
+  if(editingStaffId) {
+    Object.assign(staffList.find(s=>s.id===editingStaffId), obj);
+  } else {
+    obj.id = nextStaffId++; staffList.push(obj);
+  }
+  closeModal('staffModal'); renderStaffPage();
+}
+function deleteCurrentStaff() {
+  if(!editingStaffId) return;
+  const s = staffList.find(s=>s.id===editingStaffId);
+  if(confirm(`確定要刪除「${s?.name}」的資料？此操作無法復原。`)) {
+    staffList = staffList.filter(s=>s.id!==editingStaffId);
+    closeModal('staffModal'); renderStaffPage();
+  }
+}
+function deleteStaff(id) { staffList = staffList.filter(s=>s.id!==id); renderStaffPage(); }
+
+// ═══════════════════════════════════════════════════════════════
+//  GOOGLE DRIVE PAGE
+// ═══════════════════════════════════════════════════════════════
+const weeklyCalData = [
+  {wk:'1', dates:'8/24–8/30', admin:'8/25開學始業式、入學闖關活動<br>8/27校務會議', sel:'—', virtue:'友善校園週', admin2:'期初性別平等委員會'},
+  {wk:'2', dates:'8/31–9/06', admin:'夜光天使班開始、吉他社開始', sel:'<span class="badge type-SEL">自我覺察</span> 情緒便利貼牆', virtue:'感恩週', admin2:'反毒反黑反霸凌宣導'},
+  {wk:'3', dates:'9/07–9/13', admin:'繳納公保健保退撫、書法開始', sel:'<span class="badge type-SEL">自我覺察</span> 雙語自我介紹', virtue:'感恩週', admin2:'9/10性平辦理情形、資安通報演練'},
+  {wk:'4', dates:'9/14–9/20', admin:'暑假作業展9/15-17<br>親職座談9/20', sel:'<span class="badge type-SEL">自我覺察</span> 雙語小對話練習', virtue:'自我覺察週', admin2:'9/17寄生蟲尿液檢查'},
+  {wk:'5', dates:'9/21–9/27', admin:'人事異動補送、鐘點費結算', sel:'<span class="badge type-SEL">自我覺察</span> 情緒紅綠燈', virtue:'自我覺察週', admin2:'填報友善校園週成果'},
+  {wk:'6', dates:'9/28–10/04', admin:'9/29教師節補假<br>教師考核晉級', sel:'<span class="badge type-SEL">自我覺察</span> 雙語合作解謎', virtue:'<span class="badge badge-green">自我管理</span>開始', admin2:'10/1一四年級健康檢查'},
+  {wk:'7', dates:'10/05–10/11', admin:'10/6中秋、10/10國慶放假', sel:'<span class="badge type-SEL">自我覺察</span> 雙語心情日記', virtue:'自我管理週', admin2:'10/7流感疫苗接種'},
+  {wk:'8', dates:'10/12–10/18', admin:'10/17補假（全校放假）', sel:'<span class="badge type-SEL">自我管理/負責任決定</span>', virtue:'<span class="badge badge-blue">社會覺察</span>開始', admin2:'英語學藝競賽'},
+  {wk:'0', dates:'10/19–10/25', admin:'全國運動會調整放假', sel:'—（放假週）', virtue:'—', admin2:'—'},
+  {wk:'9', dates:'10/26–11/01', admin:'作業抽查、愛的書庫續借', sel:'<span class="badge type-SEL">自我管理</span> 互助小幫手', virtue:'堅毅週', admin2:'兒童權利公約宣導'},
+  {wk:'10', dates:'11/02–11/08', admin:'<strong>期中評量 11/6、11/7</strong>', sel:'—（評量週）', virtue:'—', admin2:'消防自衛編組訓練'},
+  {wk:'11', dates:'11/09–11/15', admin:'11/9烏克麗麗嘉年華<br>11/13外傘頂洲戶外教育', sel:'<span class="badge type-SEL">自我管理</span> 分享最喜歡的東西', virtue:'—', admin2:'防火防震宣導'},
+  {wk:'12', dates:'11/16–11/22', admin:'—', sel:'<span class="badge type-SEL">自我管理/社會覺察</span> 雙語感謝牆', virtue:'<span class="badge badge-blue">社會覺察</span>週', admin2:'藥物濫用宣導'},
+  {wk:'13', dates:'11/23–11/29', admin:'繳納公保健保退撫', sel:'<span class="badge type-SEL">自我管理</span> 雙語運動挑戰', virtue:'<span class="badge badge-purple">關係技巧</span>開始', admin2:'縣長杯桌球賽'},
+  {wk:'14', dates:'11/30–12/06', admin:'—', sel:'<span class="badge type-SEL">社會覺察</span> 校園任務導覽', virtue:'關係技巧週', admin2:'春暉宣導月、法治教育'},
+  {wk:'15', dates:'12/07–12/13', admin:'準備花燈送件', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span> 雙語合作專案', virtue:'<span class="badge badge-red">負責任決定</span>開始', admin2:'家庭教育專線宣導'},
+  {wk:'16', dates:'12/14–12/20', admin:'年終工作獎金審核', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span>', virtue:'負責任決定週', admin2:'藥物濫用宣導'},
+  {wk:'17', dates:'12/21–12/27', admin:'12/25行憲紀念日放假<br>12/27社區健走暨運動會', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span> 雙語成果展覽', virtue:'—', admin2:'期末成果動靜態展演'},
+  {wk:'18', dates:'12/28–1/03', admin:'1/1元旦放假', sel:'<span class="badge type-SEL">關係技巧/自我管理</span> 雙語小對話', virtue:'—', admin2:'環保資源回收宣導'},
+  {wk:'19', dates:'1/04–1/10', admin:'期末評量習作檢閱', sel:'<span class="badge type-SEL">關係技巧</span> 情緒紅綠燈', virtue:'—', admin2:'漱口水統計填報'},
+  {wk:'20', dates:'1/11–1/17', admin:'<strong>期末評量 1/15、1/16</strong><br>1/14期末SEL成果分享', sel:'—（評量週）', virtue:'—', admin2:'兒福社團核銷'},
+  {wk:'21', dates:'1/18–1/24', admin:'1/19校務會議<br>1/20休業式<br>2/13第二學期開始', sel:'—（期末週）', virtue:'堅毅週', admin2:'期末成績優良頒獎'},
+];
+
+function renderDrivePage() {
+  const tbody = document.getElementById('calWeeklyBody');
+  if(!tbody) return;
+  tbody.innerHTML = weeklyCalData.map(w=>`<tr>
+    <td style="text-align:center;font-weight:700;min-width:36px">${w.wk==='0'?'假期':w.wk}</td>
+    <td style="white-space:nowrap;font-size:12px;color:#64748b">${w.dates}</td>
+    <td style="font-size:12px;max-width:200px">${w.admin}</td>
+    <td style="font-size:12px">${w.sel}</td>
+    <td style="font-size:12px">${w.virtue}</td>
+    <td style="font-size:12px;max-width:180px">${w.admin2}</td>
+  </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════════════════
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+(function init() {
+  // Top bar date
+  const days = ['日','一','二','三','四','五','六'];
+  const tw = today;
+  document.getElementById('topbarDate').textContent =
+    `${tw.getFullYear()}/${String(tw.getMonth()+1).padStart(2,'0')}/${String(tw.getDate()).padStart(2,'0')} 星期${days[tw.getDay()]}`;
+
+  // Init calendar year/month to show current month
+  calYear = tw.getFullYear(); calMonth = tw.getMonth();
+
+  renderDashboard();
+})();
+</script>
+</body>
+</html>
