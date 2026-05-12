@@ -328,7 +328,8 @@
   <section class="page" id="page-calendar">
     <div class="page-title">📅 學校行事曆
       <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openEventModal()">＋ 新增活動</button>
-      <span style="font-size:11px;color:#1a73e8;background:#e8f0fe;border:1px solid #c5d9fb;border-radius:10px;padding:3px 9px;margin-left:8px">📅 藍框 = Google 行事曆同步</span>
+      <span style="font-size:11px;color:#1a73e8;background:#e8f0fe;border:1px solid #c5d9fb;border-radius:10px;padding:3px 9px;margin-left:8px">📅 藍框 = 辰光行事曆同步</span>
+      <span style="font-size:11px;color:#9d174d;background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;padding:3px 9px;margin-left:4px">👤 粉框 = 個人行事曆（cyysongyy@gmail.com）</span>
     </div>
     <div class="panel">
       <div class="panel-body">
@@ -368,7 +369,8 @@
         <span style="font-size:18px">🚨</span>
         <strong style="color:#dc2626;font-size:15px">行程衝突提醒</strong>
         <span id="conflictCount" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700"></span>
-        <span style="font-size:11px;color:#6b7280;margin-left:4px">校長個人行程 × 學校重要活動</span>
+        <span style="font-size:11px;color:#6b7280;margin-left:4px">個人 Google 行事曆 × 學校重要活動</span>
+        <span style="font-size:11px;color:#1a73e8;margin-left:auto">🔄 已同步 cyysongyy@gmail.com｜辰光行事曆</span>
       </div>
       <div id="conflictList"></div>
     </div>
@@ -1279,6 +1281,19 @@ let events = [
   {id:75,  name:'外師訪視',                    date:'2026-04-14', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視評核（第2次）'},
   {id:76,  name:'週三進修-五校策略聯盟',         date:'2026-04-22', type:'進修', src:'gcal-personal', desc:'五校策略聯盟交流進修'},
   {id:77,  name:'水燦林SEL參訪',               date:'2026-04-22', type:'SEL',  src:'gcal-personal', desc:'水燦林SEL課程參訪交流'},
+  // ── 個人行事曆 114下（2026/05 起）· 同步自 cyysongyy@gmail.com · 2026-05-13 ──
+  {id:78,  name:'輔導團專業對話',               date:'2026-05-08', type:'行政', src:'gcal-personal', desc:'輔導團專業對話（當日同時有母親節音樂發表會）'},
+  {id:79,  name:'外師訪視（樟湖國中小）',        date:'2026-05-12', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視 09:00-11:15，樟湖國中小（國小部）'},
+  {id:80,  name:'雲菁二梯 第二次說課',           date:'2026-05-14', type:'進修', src:'gcal-personal', desc:'雲菁二梯 5/21發展團隊 第二次說課 15:00-16:00（線上 Meet）'},
+  {id:81,  name:'雲菁計畫第二梯次｜第四堂課',    date:'2026-05-21', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 第四堂課 09:00-16:00 ＠拯民國小'},
+  {id:82,  name:'雲科大家長會長表揚典禮',         date:'2026-05-22', type:'行政', src:'gcal-personal', desc:'13:00 雲科大家長會長副會長表揚典禮'},
+  {id:83,  name:'外師訪視（麥寮高中）',          date:'2026-06-04', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視 09:00-11:15，麥寮高中（國中部）'},
+  {id:84,  name:'外師訪視（臺西國小）',          date:'2026-06-04', type:'行政', src:'gcal-personal', desc:'英語外籍教師訪視 13:30-15:30，臺西國小'},
+  {id:85,  name:'雲菁二梯 第二次說課（二）',      date:'2026-06-04', type:'進修', src:'gcal-personal', desc:'雲菁二梯 6/11領導改變 第二次說課 16:00-17:00（線上 Meet）'},
+  {id:86,  name:'雲菁計畫第二梯次｜第五堂課',    date:'2026-06-11', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 第五堂課 09:00-16:00（線上 Meet）'},
+  {id:87,  name:'輔導團專業對話',               date:'2026-06-12', type:'行政', src:'gcal-personal', desc:'輔導團專業對話'},
+  {id:88,  name:'雲菁計畫第二梯次｜結業式',      date:'2026-07-02', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 結業式 09:00-14:00（線上 Meet）'},
+  {id:89,  name:'TFT明日學校 辰光梯次（起）',    date:'2026-07-20', type:'活動', src:'gcal-personal', desc:'TFT 2026 夏季明日學校 辰光梯次 07/20-07/29，地點：雲林辰光國小'},
 ];
 
 // ── 真實學生名冊（來源：114學年度第2學期各班成績表.xlsx）──
@@ -1667,7 +1682,7 @@ function renderCalendar() {
 
     html += `<div class="cal-day ${isOther?'other-month':''} ${isToday?'today':''}" onclick="openEventModal('${dateStr}')">
       <div class="day-num">${d}</div>
-      ${dayEvents.slice(0,2).map(e=>`<div class="cal-event-dot type-${e.type}" title="${e.name}${e.src==='gcal'?' 📅':''}" style="${e.src==='gcal'?'border-left:2px solid #1a73e8;padding-left:4px':''}">${e.name}</div>`).join('')}
+      ${dayEvents.slice(0,2).map(e=>`<div class="cal-event-dot type-${e.type}" title="${e.name}${e.src==='gcal'?' 📅 辰光行事曆':e.src==='gcal-personal'?' 👤 個人行事曆':''}" style="${e.src==='gcal'?'border-left:3px solid #1a73e8;padding-left:4px':e.src==='gcal-personal'?'border-left:3px solid #db2777;padding-left:4px':''}">${e.name}</div>`).join('')}
       ${dayEvents.length>2?`<div style="font-size:10px;color:#64748b">+${dayEvents.length-2}</div>`:''}
     </div>`;
   }
@@ -1685,7 +1700,7 @@ function renderEventTable() {
   document.getElementById('eventTableBody').innerHTML = monthEvents.length ?
     monthEvents.map(e=>`<tr>
       <td>${fmtDate(e.date)}</td>
-      <td><strong>${e.name}</strong>${e.src==='gcal'?'<span title="來自 Google Calendar" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 GCal</span>':''}</td>
+      <td><strong>${e.name}</strong>${e.src==='gcal'?'<span title="來自辰光行事曆" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 辰光曆</span>':e.src==='gcal-personal'?'<span title="來自個人行事曆 cyysongyy@gmail.com" style="margin-left:5px;font-size:11px;background:#fce7f3;color:#9d174d;border-radius:10px;padding:1px 6px">👤 個人曆</span>':''}</td>
       <td><span class="badge type-${e.type}">${e.type}</span></td>
       <td style="color:#64748b">${e.desc||'-'}</td>
       <td>
