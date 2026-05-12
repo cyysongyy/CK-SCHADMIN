@@ -1712,9 +1712,11 @@ function renderEventTable() {
 
 function renderConflicts() {
   const importantTypes = new Set(['考試','活動']);
-  const importantKw = ['進修','畢業','典禮','評量','座談','表揚','頒獎','發表','體檢'];
+  // 不含「進修」—— 週三進修為例行性活動，不列入衝突偵測
+  const importantKw = ['畢業','典禮','評量','座談','表揚','頒獎','發表','體檢'];
 
-  const schoolEvts = events.filter(e => e.src !== 'gcal-personal');
+  // 排除週三進修（例行性，不視為學校重要活動）
+  const schoolEvts = events.filter(e => e.src !== 'gcal-personal' && !e.name.startsWith('週三進修'));
   const personalEvts = events.filter(e => e.src === 'gcal-personal');
 
   const personalByDate = {};
@@ -2903,31 +2905,6 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 
   renderDashboard();
 })();
-1/9烏克麗麗嘉年華<br>11/13外傘頂洲戶外教育', sel:'<span class="badge type-SEL">自我管理</span> 分享最喜歡的東西', virtue:'—', admin2:'防火防震宣導'},
-  {wk:'12', dates:'11/16–11/22', admin:'—', sel:'<span class="badge type-SEL">自我管理/社會覺察</span> 雙語感謝牆', virtue:'<span class="badge badge-blue">社會覺察</span>週', admin2:'藥物濫用宣導'},
-  {wk:'13', dates:'11/23–11/29', admin:'繳納公保健保退撫', sel:'<span class="badge type-SEL">自我管理</span> 雙語運動挑戰', virtue:'<span class="badge badge-purple">關係技巧</span>開始', admin2:'縣長杯桌球賽'},
-  {wk:'14', dates:'11/30–12/06', admin:'—', sel:'<span class="badge type-SEL">社會覺察</span> 校園任務導覽', virtue:'關係技巧週', admin2:'春暉宣導月、法治教育'},
-  {wk:'15', dates:'12/07–12/13', admin:'準備花燈送件', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span> 雙語合作專案', virtue:'<span class="badge badge-red">負責任決定</span>開始', admin2:'家庭教育專線宣導'},
-  {wk:'16', dates:'12/14–12/20', admin:'年終工作獎金審核', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span>', virtue:'負責任決定週', admin2:'藥物濫用宣導'},
-  {wk:'17', dates:'12/21–12/27', admin:'12/25行憲紀念日放假<br>12/27社區健走暨運動會', sel:'<span class="badge type-SEL">社會覺察/關係技巧</span> 雙語成果展覽', virtue:'—', admin2:'期末成果動靜態展演'},
-  {wk:'18', dates:'12/28–1/03', admin:'1/1元旦放假', sel:'<span class="badge type-SEL">關係技巧/自我管理</span> 雙語小對話', virtue:'—', admin2:'環保資源回收宣導'},
-  {wk:'19', dates:'1/04–1/10', admin:'期末評量習作檢閱', sel:'<span class="badge type-SEL">關係技巧</span> 情緒紅綠燈', virtue:'—', admin2:'漱口水統計填報'},
-  {wk:'20', dates:'1/11–1/17', admin:'<strong>期末評量 1/15、1/16</strong><br>1/14期末SEL成果分享', sel:'—（評量週）', virtue:'—', admin2:'兒福社團核銷'},
-  {wk:'21', dates:'1/18–1/24', admin:'1/19校務會議<br>1/20休業式<br>2/13第二學期開始', sel:'—（期末週）', virtue:'堅毅週', admin2:'期末成績優良頒獎'},
-];
-
-function renderDrivePage() {
-  const tbody = document.getElementById('calWeeklyBody');
-  if(!tbody) return;
-  tbody.innerHTML = weeklyCalData.map(w=>`<tr>
-    <td style="text-align:center;font-weight:700;min-width:36px">${w.wk==='0'?'假期':w.wk}</td>
-    <td style="white-space:nowrap;font-size:12px;color:#64748b">${w.dates}</td>
-    <td style="font-size:12px;max-width:200px">${w.admin}</td>
-    <td style="font-size:12px">${w.sel}</td>
-    <td style="font-size:12px">${w.virtue}</td>
-    <td style="font-size:12px;max-width:180px">${w.admin2}</td>
-  </tr>`).join('');
-}
 
 </script>
 </body>
