@@ -2888,9 +2888,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 
   renderDashboard();
 })();
-</script>
-</body>
-</html>1/9烏克麗麗嘉年華<br>11/13外傘頂洲戶外教育', sel:'<span class="badge type-SEL">自我管理</span> 分享最喜歡的東西', virtue:'—', admin2:'防火防震宣導'},
+1/9烏克麗麗嘉年華<br>11/13外傘頂洲戶外教育', sel:'<span class="badge type-SEL">自我管理</span> 分享最喜歡的東西', virtue:'—', admin2:'防火防震宣導'},
   {wk:'12', dates:'11/16–11/22', admin:'—', sel:'<span class="badge type-SEL">自我管理/社會覺察</span> 雙語感謝牆', virtue:'<span class="badge badge-blue">社會覺察</span>週', admin2:'藥物濫用宣導'},
   {wk:'13', dates:'11/23–11/29', admin:'繳納公保健保退撫', sel:'<span class="badge type-SEL">自我管理</span> 雙語運動挑戰', virtue:'<span class="badge badge-purple">關係技巧</span>開始', admin2:'縣長杯桌球賽'},
   {wk:'14', dates:'11/30–12/06', admin:'—', sel:'<span class="badge type-SEL">社會覺察</span> 校園任務導覽', virtue:'關係技巧週', admin2:'春暉宣導月、法治教育'},
@@ -2916,34 +2914,6 @@ function renderDrivePage() {
   </tr>`).join('');
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  MODALS
-// ═══════════════════════════════════════════════════════════════
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
-});
-
-// ═══════════════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════════════
-(function init() {
-  // Load persisted data from localStorage
-  loadData();
-
-  // Top bar date
-  const days = ['日','一','二','三','四','五','六'];
-  const tw = today;
-  document.getElementById('topbarDate').textContent =
-    `${tw.getFullYear()}/${String(tw.getMonth()+1).padStart(2,'0')}/${String(tw.getDate()).padStart(2,'0')} 星期${days[tw.getDay()]}`;
-
-  // Init calendar year/month to show current month
-  calYear = tw.getFullYear(); calMonth = tw.getMonth();
-
-  renderDashboard();
-})();
 </script>
 </body>
 </html>
