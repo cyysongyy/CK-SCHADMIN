@@ -1719,16 +1719,21 @@ function renderEventTable() {
     return +y===calYear && +m===(calMonth+1);
   }).sort((a,b)=>a.date.localeCompare(b.date));
 
+  const _wd = ['日','一','二','三','四','五','六'];
   document.getElementById('eventTableBody').innerHTML = monthEvents.length ?
-    monthEvents.map(e=>`<tr>
-      <td>${fmtDate(e.date)}</td>
+    monthEvents.map(e=>{
+      const _dt = new Date(e.date + 'T00:00:00');
+      const _dateCell = `${fmtDate(e.date)}<br><span style="font-size:11px;color:#64748b">星期${_wd[_dt.getDay()]}</span>`;
+      return `<tr>
+      <td>${_dateCell}</td>
       <td><strong>${e.name}</strong>${e.src==='gcal'?'<span title="來自辰光行事曆" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 辰光曆</span>':e.src==='gcal-personal'?'<span title="來自個人行事曆 cyysongyy@gmail.com" style="margin-left:5px;font-size:11px;background:#fce7f3;color:#9d174d;border-radius:10px;padding:1px 6px">👤 個人曆</span>':''}</td>
       <td><span class="badge type-${e.type}">${e.type}</span></td>
       <td style="color:#64748b">${e.desc||'-'}</td>
       <td>
         <button class="btn btn-warning btn-sm" onclick="editEvent(${e.id})">編輯</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDel(()=>deleteEvent(${e.id}))">刪除</button>
-      </td></tr>`).join('') :
+      </td></tr>`;
+    }).join('') :
     `<tr><td colspan="5" class="empty-state">本月尚無活動記錄</td></tr>`;
 }
 
@@ -3020,20 +3025,40 @@ async function fetchGCalEvents(accessToken) {
     // 抓取本年度 1/1 ～ 下年度 12/31，確保整個學年資料齊全
     const timeMin  = new Date(now.getFullYear(), 0, 1).toISOString();
     const timeMax  = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
-    const calId    = encodeURIComponent('primary');
-    const url      = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`
-                   + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500`;
+    // ① 先取得所有行事曆清單（包含子行事曆）
+    const calListRes  = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
+                          { headers: { Authorization: 'Bearer ' + accessToken } });
+    const calListData = await calListRes.json();
+    if (calListData.error) { alert('取得行事曆清單失敗：' + calListData.error.message); return; }
 
-    const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
-    const data = await res.json();
+    // 過濾掉假日／生日等雜訊行事曆，只保留使用者有勾選的行事曆
+    const calendars = (calListData.items || []).filter(c =>
+      c.selected !== false &&
+      !c.id.includes('#holiday@') &&
+      !c.id.includes('#contacts@')
+    );
 
-    if (data.error) { alert('取得行事曆失敗：' + data.error.message); return; }
+    // ② 逐一從每個行事曆抓取事件，用 event id 去除重複
+    const seenIds = new Set();
+    let allItems = [];
+    for (const cal of calendars) {
+      const calId = encodeURIComponent(cal.id);
+      const url   = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`
+                  + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500`;
+      const res   = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+      const data  = await res.json();
+      if (!data.error && data.items) {
+        data.items.forEach(item => {
+          if (!seenIds.has(item.id)) { seenIds.add(item.id); allItems.push(item); }
+        });
+      }
+    }
 
     // 移除舊的個人 Google 行事曆資料，換成最新抓到的
     events = events.filter(e => e.src !== 'gcal-personal');
     let newId = (Math.max(0, ...events.map(e => e.id)) + 1);
 
-    (data.items || []).forEach(item => {
+    allItems.forEach(item => {
       // 略過已拒絕的邀請
       const self = (item.attendees || []).find(a => a.self);
       if (self && self.responseStatus === 'declined') return;
