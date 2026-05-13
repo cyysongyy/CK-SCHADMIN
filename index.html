@@ -232,6 +232,27 @@
 </head>
 <body>
 
+<!-- ══════════════════════════════════════════════════════════
+     AUTH OVERLAY  — 首次開啟輸入密碼，localStorage 記住狀態
+══════════════════════════════════════════════════════════ -->
+<div id="authOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%);display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:44px 36px 36px;width:340px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,0.5);text-align:center">
+    <div style="font-size:52px;margin-bottom:14px">🏫</div>
+    <div style="font-size:21px;font-weight:700;color:#1e293b;margin-bottom:4px">Young校務管理系統</div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:32px">辰光國民小學</div>
+    <input id="authInput" type="password" placeholder="請輸入密碼"
+      onkeydown="if(event.key==='Enter')doLogin()"
+      style="width:100%;padding:13px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;outline:none;margin-bottom:8px;box-sizing:border-box;transition:border-color .2s"
+      onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">
+    <div id="authErr" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px;text-align:left;padding-left:4px">❌ 密碼錯誤，請再試一次</div>
+    <button onclick="doLogin()"
+      style="width:100%;padding:13px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;letter-spacing:.5px">
+      進入系統 →
+    </button>
+    <div style="margin-top:20px;font-size:11px;color:#cbd5e1">首次登入後，此裝置將自動記住，無需重複輸入</div>
+  </div>
+</div>
+
 <!-- TOP BAR -->
 <header class="topbar">
   <div class="topbar-left">
@@ -283,6 +304,11 @@
   <button class="nav-item" onclick="printPage()">
     <span class="nav-icon">🖨️</span> 列印報表
   </button>
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 8px;border-top:1px solid #334155">
+    <button class="nav-item" onclick="doLogout()" style="color:#f87171;width:calc(100% - 0px);margin:0">
+      <span class="nav-icon">🔒</span> 登出
+    </button>
+  </div>
 </nav>
 
 <!-- MAIN CONTENT -->
@@ -1201,6 +1227,46 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
+// ═══════════════════════════════════════════════════════════════
+const _AUTH_KEY = 'yk_auth_v1';
+const _AUTH_PWD = 'Young2026';   // ← 修改此處可更換密碼
+
+(function checkAuth() {
+  const overlay = document.getElementById('authOverlay');
+  if (!overlay) return;
+  if (localStorage.getItem(_AUTH_KEY) === 'granted') {
+    overlay.style.display = 'none';   // 已認證 → 直接隱藏
+  }
+  // 未認證時 overlay 預設 display:flex 保持顯示
+  // 自動聚焦密碼欄
+  setTimeout(() => {
+    const inp = document.getElementById('authInput');
+    if (inp && overlay.style.display !== 'none') inp.focus();
+  }, 100);
+})();
+
+function doLogin() {
+  const inp = document.getElementById('authInput');
+  const err = document.getElementById('authErr');
+  if (inp.value === _AUTH_PWD) {
+    localStorage.setItem(_AUTH_KEY, 'granted');
+    document.getElementById('authOverlay').style.display = 'none';
+    err.style.display = 'none';
+  } else {
+    err.style.display = 'block';
+    inp.value = '';
+    inp.focus();
+  }
+}
+
+function doLogout() {
+  if (!confirm('確定要登出？下次開啟需重新輸入密碼。')) return;
+  localStorage.removeItem(_AUTH_KEY);
+  location.reload();
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  DATA STORE (in-memory)
 // ═══════════════════════════════════════════════════════════════
