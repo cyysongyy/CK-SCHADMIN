@@ -370,7 +370,9 @@
         <strong style="color:#dc2626;font-size:15px">行程衝突提醒</strong>
         <span id="conflictCount" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700"></span>
         <span style="font-size:11px;color:#6b7280;margin-left:4px">個人 Google 行事曆 × 學校重要活動</span>
-        <span style="font-size:11px;color:#1a73e8;margin-left:auto">🔄 已同步 cyysongyy@gmail.com｜辰光行事曆</span>
+        <span style="font-size:11px;color:#6b7280;margin-left:4px" id="conflictRange"></span>
+        <span style="font-size:11px;color:#1a73e8;margin-left:auto" id="conflictSyncLabel">🔄 已同步 cyysongyy@gmail.com</span>
+        <button onclick="renderConflicts()" style="font-size:11px;padding:2px 8px;border:1px solid #1a73e8;border-radius:8px;background:#fff;color:#1a73e8;cursor:pointer;margin-left:6px" title="重新整理衝突偵測">↺ 更新</button>
       </div>
       <div id="conflictList"></div>
     </div>
@@ -1715,9 +1717,15 @@ function renderConflicts() {
   // 不含「進修」—— 週三進修為例行性活動，不列入衝突偵測
   const importantKw = ['畢業','典禮','評量','座談','表揚','頒獎','發表','體檢'];
 
-  // 排除週三進修（例行性，不視為學校重要活動）
-  const schoolEvts = events.filter(e => e.src !== 'gcal-personal' && !e.name.startsWith('週三進修'));
-  const personalEvts = events.filter(e => e.src === 'gcal-personal');
+  // 計算本月第一天與下個月最後一天（只顯示本月+下月）
+  const nowD = new Date();
+  const rangeStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1).toISOString().slice(0,10);
+  const rangeEnd   = new Date(nowD.getFullYear(), nowD.getMonth()+2, 0).toISOString().slice(0,10);
+
+  // 排除週三進修（學校端與個人端均排除，屬例行性活動）
+  const schoolEvts  = events.filter(e => e.src !== 'gcal-personal' && !e.name.startsWith('週三進修'));
+  // 個人行程亦排除週三進修，避免誤判為衝突
+  const personalEvts = events.filter(e => e.src === 'gcal-personal' && !e.name.startsWith('週三進修'));
 
   const personalByDate = {};
   personalEvts.forEach(e => {
@@ -1727,6 +1735,8 @@ function renderConflicts() {
 
   const conflicts = [];
   Object.entries(personalByDate).forEach(([date, pEvts]) => {
+    // 只偵測本月與下個月範圍內的日期
+    if (date < rangeStart || date > rangeEnd) return;
     const sEvts = schoolEvts.filter(e => e.date === date && (
       importantTypes.has(e.type) || importantKw.some(kw => e.name.includes(kw))
     ));
@@ -1741,6 +1751,14 @@ function renderConflicts() {
   const list  = document.getElementById('conflictList');
   const cnt   = document.getElementById('conflictCount');
   if (!panel) return;
+
+  // 更新標頭：顯示範圍與同步時間
+  const rangeEl = document.getElementById('conflictRange');
+  const syncEl  = document.getElementById('conflictSyncLabel');
+  const m1 = nowD.getMonth()+1, m2 = nowD.getMonth()+2 > 12 ? 1 : nowD.getMonth()+2;
+  if (rangeEl) rangeEl.textContent = '（' + m1 + '月～' + m2 + '月）';
+  const ts = nowD.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
+  if (syncEl) syncEl.textContent = '🔄 已同步 cyysongyy@gmail.com　' + nowD.getMonth()+1 + '/' + nowD.getDate() + ' ' + ts;
 
   if (conflicts.length === 0) { panel.style.display='none'; return; }
   panel.style.display = 'block';
@@ -2904,6 +2922,14 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   calYear = tw.getFullYear(); calMonth = tw.getMonth();
 
   renderDashboard();
+
+  // 自動定期更新衝突偵測：每 30 分鐘重新計算一次（頁面在行事曆時才執行）
+  setInterval(() => {
+    const calPage = document.getElementById('page-calendar');
+    if (calPage && calPage.classList.contains('active')) {
+      renderConflicts();
+    }
+  }, 30 * 60 * 1000); // 每 30 分鐘
 })();
 
 </script>
