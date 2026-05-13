@@ -131,7 +131,8 @@
   .cal-day:hover { background: #f0f4f8; }
   .cal-day.today { background: #dbeafe; }
   .cal-day.other-month .day-num { color: #cbd5e1; }
-  .day-num { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .day-num { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 3px; display:flex; align-items:baseline; gap:4px; }
+  .day-wd  { font-size: 10px; font-weight: 400; color: #94a3b8; }
   .cal-event-dot { font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-bottom: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 
@@ -1699,8 +1700,10 @@ function renderCalendar() {
     const dayEvents = events.filter(e=>e.date===dateStr);
     const isToday = dateStr===todayStr;
 
+    const wdLabels = ['日','一','二','三','四','五','六'];
+    const wdName = wdLabels[i % 7];
     html += `<div class="cal-day ${isOther?'other-month':''} ${isToday?'today':''}" onclick="openEventModal('${dateStr}')">
-      <div class="day-num">${d}</div>
+      <div class="day-num">${d}<span class="day-wd">週${wdName}</span></div>
       ${dayEvents.slice(0,2).map(e=>`<div class="cal-event-dot type-${e.type}" title="${e.name}${e.src==='gcal'?' 📅 辰光行事曆':e.src==='gcal-personal'?' 👤 個人行事曆':''}" style="${e.src==='gcal'?'border-left:3px solid #1a73e8;padding-left:4px':e.src==='gcal-personal'?'border-left:3px solid #db2777;padding-left:4px':''}">${e.name}</div>`).join('')}
       ${dayEvents.length>2?`<div style="font-size:10px;color:#64748b">+${dayEvents.length-2}</div>`:''}
     </div>`;
@@ -3014,11 +3017,12 @@ async function fetchGCalEvents(accessToken) {
 
   try {
     const now      = new Date();
-    const timeMin  = new Date(now.getFullYear(), now.getMonth(),     1).toISOString();
-    const timeMax  = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59).toISOString();
+    // 抓取本年度 1/1 ～ 下年度 12/31，確保整個學年資料齊全
+    const timeMin  = new Date(now.getFullYear(), 0, 1).toISOString();
+    const timeMax  = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
     const calId    = encodeURIComponent('primary');
     const url      = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`
-                   + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=200`;
+                   + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500`;
 
     const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
     const data = await res.json();
@@ -3068,6 +3072,15 @@ async function fetchGCalEvents(accessToken) {
     if (btn) { btn.textContent = '🔄 同步行事曆'; btn.disabled = false; }
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+//  頁面載入後 GIS 庫就緒時，立即嘗試靜默同步 Google 行事曆
+//  （prompt:'' → 若有既有 Google 登入狀態即自動取得 token，
+//    不需彈出視窗；若需使用者互動才顯示橫幅提示）
+// ─────────────────────────────────────────────────────────────
+window.onGoogleLibraryLoad = function() {
+  setTimeout(autoSyncCalendar, 800);
+};
 
 </script>
 </body>
