@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>辰光國小校務系統</title>
+<title>Young校務管理系統</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -237,8 +237,8 @@
   <div class="topbar-left">
     <div class="school-logo">🏫</div>
     <div>
-      <div class="school-name">辰光國民小學</div>
-      <div class="school-sub">校務行政管理系統</div>
+      <div class="school-name">Young校務管理系統</div>
+      <div class="school-sub">辰光國民小學</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -1503,7 +1503,7 @@ function exportDataJSON() {
   const data = { events, staffList, selCourses, adminTasks, trainings, nextId, nextStaffId, exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download = '辰光校務系統備份_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  a.download = 'Young校務管理系統備份_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
 }
 function importDataJSON(input) {
   const file = input.files[0]; if(!file) return;
