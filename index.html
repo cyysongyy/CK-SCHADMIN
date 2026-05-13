@@ -1538,9 +1538,8 @@ function showPage(id, el) {
   if(id==='dashboard') renderDashboard();
   if(id==='calendar') {
     renderCalendar();
-    // 自動顯示同步提示橫幅
-    const b = document.getElementById('gcalSyncBanner');
-    if(b) b.style.display = 'flex';
+    // 開啟行事曆頁面時自動嘗試同步
+    setTimeout(autoSyncCalendar, 1200);
   }
   if(id==='grades') renderGradePage();
   if(id==='admin') renderAdminTable();
@@ -2955,6 +2954,33 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // ═══════════════════════════════════════════════════════════════
 const GCAL_CLIENT_ID = '308729450984-dhrp780c6262cumep12o2e6q3491mvds.apps.googleusercontent.com';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly';
+
+// 開啟行事曆頁面時自動嘗試同步（silent first, 失敗才顯示橫幅）
+function autoSyncCalendar() {
+  const banner = document.getElementById('gcalSyncBanner');
+  if (typeof google === 'undefined' || !google.accounts) {
+    // GIS 尚未載入，顯示橫幅讓使用者手動點
+    if (banner) banner.style.display = 'flex';
+    return;
+  }
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope:     GCAL_SCOPE,
+    callback:  async (resp) => {
+      if (resp.error) {
+        // 需要使用者互動（例如首次授權），顯示橫幅
+        if (banner) banner.style.display = 'flex';
+        return;
+      }
+      // 取得 token 成功，直接靜默同步
+      if (banner) banner.style.display = 'none';
+      await fetchGCalEvents(resp.access_token);
+    }
+  });
+  // prompt:'' 讓 Google 決定是否需要顯示授權畫面
+  // 若已授權過，通常可靜默取得 token
+  tokenClient.requestAccessToken({ prompt: '' });
+}
 
 function syncGoogleCalendar() {
   const btn = document.getElementById('gcalSyncBtn');
