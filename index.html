@@ -365,6 +365,17 @@
         <tbody id="eventTableBody"></tbody>
       </table>
     </div>
+    <!-- Google Calendar 同步提示橫幅（進入行事曆頁時自動顯示） -->
+    <div id="gcalSyncBanner" style="display:none;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:10px 16px;margin-bottom:10px;align-items:center;gap:10px">
+      <span style="font-size:20px">📅</span>
+      <div style="flex:1">
+        <strong style="color:#1d4ed8;font-size:13px">建議同步 Google 行事曆</strong>
+        <span style="color:#3b82f6;font-size:12px;margin-left:6px">每次開啟時同步，確保衝突偵測顯示最新資料</span>
+      </div>
+      <button onclick="syncGoogleCalendar();document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 14px;border:none;border-radius:8px;background:#1a73e8;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap">🔄 立即同步</button>
+      <button onclick="document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 10px;border:1px solid #93c5fd;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap">略過</button>
+    </div>
+
     <div class="conflict-panel" id="conflictPanel" style="display:none">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <span style="font-size:18px">🚨</span>
@@ -1525,7 +1536,12 @@ function showPage(id, el) {
   document.getElementById('page-'+id).classList.add('active');
   if(el) el.classList.add('active');
   if(id==='dashboard') renderDashboard();
-  if(id==='calendar') renderCalendar();
+  if(id==='calendar') {
+    renderCalendar();
+    // 自動顯示同步提示橫幅
+    const b = document.getElementById('gcalSyncBanner');
+    if(b) b.style.display = 'flex';
+  }
   if(id==='grades') renderGradePage();
   if(id==='admin') renderAdminTable();
   if(id==='training') renderTrainingPage();
@@ -3017,6 +3033,9 @@ async function fetchGCalEvents(accessToken) {
     const ts = t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
     if (syncEl) syncEl.textContent = '✅ 已同步 Google 行事曆 ' + (t.getMonth()+1) + '/' + t.getDate() + ' ' + ts;
     if (btn)   { btn.textContent = '🔄 重新同步'; btn.disabled = false; }
+    // 同步完成，隱藏提示橫幅
+    const banner = document.getElementById('gcalSyncBanner');
+    if (banner) banner.style.display = 'none';
 
   } catch (err) {
     alert('同步失敗：' + err.message);
