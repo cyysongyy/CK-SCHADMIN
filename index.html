@@ -890,43 +890,29 @@
     <div class="panel" style="margin-bottom:24px">
       <div class="panel-header">
         <span class="panel-title">📌 近期夕會重點摘要</span>
-        <span class="rmtg-updated">更新：2026/05/14　114下 · 每週夕會</span>
+        <span class="rmtg-updated">✨ 同步行事曆後自動抓取最新兩週</span>
       </div>
       <div class="panel-body">
         <div class="recent-mtg-grid">
 
-          <!-- 本週 第12週 -->
-          <div class="recent-mtg-card">
+          <!-- 本週（動態載入） -->
+          <div class="recent-mtg-card" id="rmtgThisWeek">
             <div class="rmtg-badge">本週</div>
-            <div class="rmtg-title">第12週・5/11～5/17</div>
-            <ul class="rmtg-points">
-              <li>學習扶助篩選測驗本週進行</li>
-              <li>本週五全校公開朗讀（感恩主題）</li>
-              <li>課程計畫使用新格式；本週有班級 SEL 課程</li>
-              <li>5/14（四）圍圈活動「感恩」主題</li>
-              <li>5/15 收感恩學習單；晨會經典背誦本週暫停</li>
-              <li>6/10 前完成公開授課文件；6/24 SEL 分享請及早準備</li>
-              <li>防災成果、資安計劃本週上傳管考系統</li>
-              <li>品德教育成果 5 月底前繳交</li>
+            <div class="rmtg-title" id="rmtgThisTitle">—</div>
+            <ul class="rmtg-points" id="rmtgThisPoints">
+              <li style="color:#94a3b8">同步行事曆後自動載入 ⟳</li>
             </ul>
-            <a class="rmtg-link" href="https://drive.google.com/file/d/10aXdccn7yPHS6OUohNK9zsA0ACsZ9hBR/view" target="_blank">📄 查看完整紀錄 →</a>
+            <a class="rmtg-link" id="rmtgThisLink" href="#" target="_blank">📄 查看完整紀錄 →</a>
           </div>
 
-          <!-- 上週 第11週 -->
-          <div class="recent-mtg-card last-wk">
+          <!-- 上週（動態載入） -->
+          <div class="recent-mtg-card last-wk" id="rmtgLastWeek">
             <div class="rmtg-badge last">上週</div>
-            <div class="rmtg-title">第11週・5/4～5/10</div>
-            <ul class="rmtg-points">
-              <li>5/28（四）全校學力測驗，請老師帶學生練習題庫</li>
-              <li>母親節音樂會 5/8，5/7 預演；發淺藍 T-Shirt</li>
-              <li>5/11 起第二階段 SEL 班級課程正式開始</li>
-              <li>5/15 全校公開朗讀（感恩主題）</li>
-              <li>5/7 圍圈「堅毅」主題活動</li>
-              <li>5/6 教科書遴選（辦公室）</li>
-              <li>5/8 前完成職場霸凌防治研習（e 等公務園）</li>
-              <li>5 月午餐費每生 800 元，預計 5/4 已收</li>
+            <div class="rmtg-title" id="rmtgLastTitle">—</div>
+            <ul class="rmtg-points" id="rmtgLastPoints">
+              <li style="color:#94a3b8">同步行事曆後自動載入 ⟳</li>
             </ul>
-            <a class="rmtg-link" style="color:#64748b" href="https://drive.google.com/file/d/1LWSCSMNMB9uRpDsBmAAsEGizbmBW2zb2/view" target="_blank">📄 查看完整紀錄 →</a>
+            <a class="rmtg-link" style="color:#64748b" id="rmtgLastLink" href="#" target="_blank">📄 查看完整紀錄 →</a>
           </div>
 
         </div>
@@ -1747,7 +1733,7 @@ function showPage(id, el) {
   if(id==='sel') renderSelPage();
   if(id==='drive') renderDrivePage();
   if(id==='staff') renderStaffPage();
-  if(id==='meeting') renderMeetingContent();
+  if(id==='meeting') { renderMeetingContent(); autoLoadRecentMeetings(); }
 }
 
 function printPage() { window.print(); }
@@ -3161,7 +3147,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 //  GOOGLE CALENDAR OAuth 同步
 // ═══════════════════════════════════════════════════════════════
 const GCAL_CLIENT_ID = '308729450984-dhrp780c6262cumep12o2e6q3491mvds.apps.googleusercontent.com';
-const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.metadata.readonly';
+const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.readonly';
 const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 // 開啟行事曆頁面時自動嘗試同步（silent first, 失敗才顯示橫幅）
@@ -3220,6 +3206,7 @@ function syncGoogleCalendar() {
 
 async function fetchGCalEvents(accessToken) {
   _gToken = accessToken; // 存全域，供會議記錄 Drive API 使用
+  setTimeout(autoLoadRecentMeetings, 200); // 若會議頁面已開啟則自動更新摘要
   const btn     = document.getElementById('gcalSyncBtn');
   const syncEl  = document.getElementById('conflictSyncLabel');
   if (btn) btn.textContent = '⏳ 同步中...';
@@ -3332,6 +3319,143 @@ window.onGoogleLibraryLoad = function() {
 //  MEETING RECORDS — 辰光會議 Google Drive 連結
 // ═══════════════════════════════════════════════════════════════
 let _gToken = null; // 全域 Google OAuth token（Calendar sync 後設定）
+
+// ── 懶載入 mammoth.js（只在會議頁面使用時才下載） ──────────────
+async function loadMammoth() {
+  if (window.mammoth) return;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ── 自動載入最近兩週夕會摘要 ──────────────────────────────────
+// 每次開啟會議記錄頁 + 行事曆同步後自動執行
+// 目前學期資料夾：114下 / 每週夕會
+const RECENT_MTG_FOLDER = '1FAb8TBPYhbroQIigcUYjHqzasAX20sC6';
+
+async function autoLoadRecentMeetings() {
+  // 只在會議頁面可見時執行
+  const page = document.getElementById('page-meeting');
+  if (!page || !page.classList.contains('active')) return;
+  if (!_gToken) return;
+
+  const thisUl   = document.getElementById('rmtgThisPoints');
+  const lastUl   = document.getElementById('rmtgLastPoints');
+  if (!thisUl || !lastUl) return;
+
+  thisUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
+  lastUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
+
+  try {
+    // 1. 取最近 10 筆 .docx，依修改時間排序
+    const q   = encodeURIComponent(`'${RECENT_MTG_FOLDER}' in parents and trashed=false`);
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}`
+              + `&fields=files(id,name,mimeType,webViewLink,modifiedTime)`
+              + `&orderBy=modifiedTime+desc&pageSize=10`;
+    const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + _gToken } });
+    const data = await res.json();
+    if (data.error) { thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#ef4444">Drive 存取失敗</li>'; return; }
+
+    // 只留 .docx 並依檔名內的日期排序（格式：第N週-MMDD.docx）
+    const docs = (data.files || [])
+      .filter(f => f.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+      .sort((a, b) => {
+        const getMMDD = n => { const m = n.match(/(\d{4})(?:\.docx)?/i); return m ? +m[1] : 0; };
+        return getMMDD(b.name) - getMMDD(a.name);
+      });
+
+    if (docs.length === 0) { thisUl.innerHTML = '<li style="color:#94a3b8">尚無 .docx 檔案</li>'; return; }
+
+    // 手機版：直接顯示連結，不解析（省頻寬）
+    if (_IS_MOBILE) {
+      fillCardMobile(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
+      if (docs[1]) fillCardMobile(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
+      return;
+    }
+
+    // 電腦版：載入 mammoth.js 並解析內容
+    await loadMammoth();
+    await fillCardDesktop(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
+    if (docs[1]) await fillCardDesktop(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
+
+  } catch (e) {
+    console.warn('autoLoadRecentMeetings:', e);
+  }
+}
+
+function fillCardMobile(file, titleId, ulId, linkId) {
+  const cleanName = file.name.replace(/\.docx\s*/i, '').trim();
+  document.getElementById(titleId).textContent = cleanName;
+  document.getElementById(ulId).innerHTML = '<li style="color:#64748b">點擊右方連結查看完整紀錄</li>';
+  const a = document.getElementById(linkId);
+  if (a) { a.href = file.webViewLink; a.style.display = 'inline'; }
+}
+
+async function fillCardDesktop(file, titleId, ulId, linkId) {
+  const cleanName = file.name.replace(/\.docx\s*/i, '').trim();
+  document.getElementById(titleId).textContent = cleanName;
+  const a = document.getElementById(linkId);
+  if (a) a.href = file.webViewLink;
+
+  const points = await extractDocxPoints(file.id);
+  const ul = document.getElementById(ulId);
+  ul.innerHTML = points.length
+    ? points.map(p => `<li>${escHtml(p)}</li>`).join('')
+    : '<li style="color:#94a3b8">（無法解析本檔案）</li>';
+}
+
+// ── 下載 .docx 並抽取報告重點 ────────────────────────────────
+const _mtgCache = {}; // fileId → points[]
+
+async function extractDocxPoints(fileId) {
+  if (_mtgCache[fileId]) return _mtgCache[fileId];
+  try {
+    const dlRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + _gToken } }
+    );
+    if (!dlRes.ok) return [];
+    const buf    = await dlRes.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+
+    const div = document.createElement('div');
+    div.innerHTML = result.value;
+
+    const roleOrder = ['校長','教導主任','總務主任','教務組長','訓導組長','午餐','健康中心','人事','主計','出納'];
+    const points = [];
+
+    div.querySelectorAll('tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 3) return;
+      const role    = cells[0].textContent.trim();
+      const content = cells[2].textContent.replace(/\s+/g, ' ').trim();
+      if (!content || content === '報告事項' || content.length < 5) return;
+      if (role === '出席人員' || role === '其他' || role === '') return;
+
+      // 拆解編號條列（1. 1、（1）等格式）
+      const parts = content
+        .split(/(?<=[。；\s])(?=\d+[.、．])|(?<=\s)(?=\d+[.、．])|\n|\r/)
+        .flatMap(s => s.split(/^\d+[.、．]\s*/m))
+        .map(s => s.trim())
+        .filter(s => s.length >= 6 && s.length <= 80 && !/^(\d+[.、])/.test(s));
+
+      // 每人最多取 2 條，不超過 80 字
+      const take = parts.length ? parts : [content.slice(0, 75) + (content.length > 75 ? '…' : '')];
+      take.slice(0, 2).forEach(p => points.push(p));
+    });
+
+    const uniq = [...new Set(points)].slice(0, 10);
+    _mtgCache[fileId] = uniq;
+    return uniq;
+  } catch (e) { return []; }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 const MEETING_FOLDERS = {
   '114': {
