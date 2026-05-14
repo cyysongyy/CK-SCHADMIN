@@ -197,11 +197,6 @@
     .main { margin-left: 0; }
     .dash-grid { grid-template-columns: 1fr; }
   }
-  /* ── 手機版：隱藏 Google 行事曆同步相關元素 ── */
-  @media (max-width: 800px) {
-    #gcalSyncBanner { display: none !important; }
-    #gcalSyncBtn    { display: none !important; }
-  }
 
   /* ── Print ── */
   @media print {
@@ -3041,15 +3036,6 @@ const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAge
 function autoSyncCalendar() {
   const banner = document.getElementById('gcalSyncBanner');
 
-  // ── 手機版：完全隱藏同步橫幅與按鈕，顯示靜態說明文字 ──
-  if (_IS_MOBILE) {
-    if (banner) banner.style.display = 'none';
-    const syncBtn = document.getElementById('gcalSyncBtn');
-    if (syncBtn) syncBtn.style.display = 'none';
-    const syncEl = document.getElementById('conflictSyncLabel');
-    if (syncEl) syncEl.textContent = '📱 個人行事曆同步請至電腦版 Chrome';
-    return;
-  }
 
   if (typeof google === 'undefined' || !google.accounts) {
     // GIS 尚未載入，顯示橫幅讓使用者手動點
@@ -3189,8 +3175,7 @@ async function fetchGCalEvents(accessToken) {
 //    不需彈出視窗；若需使用者互動才顯示橫幅提示）
 // ─────────────────────────────────────────────────────────────
 window.onGoogleLibraryLoad = function() {
-  // 手機版不在頁面載入時自動觸發 OAuth（避免強制跳頁）
-  if (!_IS_MOBILE) setTimeout(autoSyncCalendar, 800);
+  setTimeout(autoSyncCalendar, 800);
 };
 
 </script>
