@@ -229,6 +229,27 @@
   .score-c { color: #f59e0b; }
   .score-d { color: #ef4444; }
 
+  /* ── Recent Meeting Summary ── */
+  .recent-mtg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .recent-mtg-grid { grid-template-columns: 1fr; } }
+  .recent-mtg-card { background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06); border-left: 4px solid #2563eb; }
+  .recent-mtg-card.last-wk { border-left-color: #94a3b8; }
+  .rmtg-badge { display: inline-block; font-size: 11px; font-weight: 700;
+    color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; }
+  .rmtg-badge.last { color: #64748b; background: #f1f5f9; }
+  .rmtg-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+  .rmtg-points { list-style: none; padding: 0; margin: 0 0 12px; }
+  .rmtg-points li { display: flex; gap: 8px; font-size: 13px; color: #374151;
+    padding: 5px 0; border-bottom: 1px solid #f8fafc; line-height: 1.5; }
+  .rmtg-points li:last-child { border-bottom: none; }
+  .rmtg-points li::before { content: '›'; color: #2563eb; font-weight: 900;
+    flex-shrink: 0; font-size: 15px; line-height: 1.3; }
+  .rmtg-card.last-wk .rmtg-points li::before { color: #94a3b8; }
+  .rmtg-link { font-size: 12px; color: #2563eb; text-decoration: none; }
+  .rmtg-link:hover { text-decoration: underline; }
+  .rmtg-updated { font-size: 11px; color: #94a3b8; }
+
   /* ── Meeting Records ── */
   .meeting-year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
   .meeting-tab { padding: 8px 22px; border-radius: 20px; border: 2px solid #e2e8f0;
@@ -863,6 +884,53 @@
       <a href="https://drive.google.com/drive/folders/1BUeIuZIi9I2kZ_x4doj7NpLck_q9CjAb"
          target="_blank" class="btn btn-outline btn-sm"
          style="margin-left:auto;font-size:12px;text-decoration:none">☁️ 開啟 Drive 資料夾</a>
+    </div>
+
+    <!-- ── 近期夕會重點摘要 ── -->
+    <div class="panel" style="margin-bottom:24px">
+      <div class="panel-header">
+        <span class="panel-title">📌 近期夕會重點摘要</span>
+        <span class="rmtg-updated">更新：2026/05/14　114下 · 每週夕會</span>
+      </div>
+      <div class="panel-body">
+        <div class="recent-mtg-grid">
+
+          <!-- 本週 第12週 -->
+          <div class="recent-mtg-card">
+            <div class="rmtg-badge">本週</div>
+            <div class="rmtg-title">第12週・5/11～5/17</div>
+            <ul class="rmtg-points">
+              <li>學習扶助篩選測驗本週進行</li>
+              <li>本週五全校公開朗讀（感恩主題）</li>
+              <li>課程計畫使用新格式；本週有班級 SEL 課程</li>
+              <li>5/14（四）圍圈活動「感恩」主題</li>
+              <li>5/15 收感恩學習單；晨會經典背誦本週暫停</li>
+              <li>6/10 前完成公開授課文件；6/24 SEL 分享請及早準備</li>
+              <li>防災成果、資安計劃本週上傳管考系統</li>
+              <li>品德教育成果 5 月底前繳交</li>
+            </ul>
+            <a class="rmtg-link" href="https://drive.google.com/file/d/10aXdccn7yPHS6OUohNK9zsA0ACsZ9hBR/view" target="_blank">📄 查看完整紀錄 →</a>
+          </div>
+
+          <!-- 上週 第11週 -->
+          <div class="recent-mtg-card last-wk">
+            <div class="rmtg-badge last">上週</div>
+            <div class="rmtg-title">第11週・5/4～5/10</div>
+            <ul class="rmtg-points">
+              <li>5/28（四）全校學力測驗，請老師帶學生練習題庫</li>
+              <li>母親節音樂會 5/8，5/7 預演；發淺藍 T-Shirt</li>
+              <li>5/11 起第二階段 SEL 班級課程正式開始</li>
+              <li>5/15 全校公開朗讀（感恩主題）</li>
+              <li>5/7 圍圈「堅毅」主題活動</li>
+              <li>5/6 教科書遴選（辦公室）</li>
+              <li>5/8 前完成職場霸凌防治研習（e 等公務園）</li>
+              <li>5 月午餐費每生 800 元，預計 5/4 已收</li>
+            </ul>
+            <a class="rmtg-link" style="color:#64748b" href="https://drive.google.com/file/d/1LWSCSMNMB9uRpDsBmAAsEGizbmBW2zb2/view" target="_blank">📄 查看完整紀錄 →</a>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <!-- 需授權提示 -->
