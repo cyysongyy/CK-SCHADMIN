@@ -392,15 +392,17 @@
         <tbody id="eventTableBody"></tbody>
       </table>
     </div>
-    <!-- Google Calendar 同步提示橫幅（進入行事曆頁時自動顯示） -->
-    <div id="gcalSyncBanner" style="display:none;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:10px 16px;margin-bottom:10px;align-items:center;gap:10px">
-      <span style="font-size:20px">📅</span>
-      <div style="flex:1">
-        <strong style="color:#1d4ed8;font-size:13px">建議同步 Google 行事曆</strong>
-        <span style="color:#3b82f6;font-size:12px;margin-left:6px">每次開啟時同步，確保衝突偵測顯示最新資料</span>
+    <!-- Google Calendar 同步提示橫幅（桌面版：自動靜默同步；手機版：說明手動流程） -->
+    <div id="gcalSyncBanner" style="display:none;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:12px;padding:10px 16px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:20px" id="gcalBannerIcon">📅</span>
+      <div style="flex:1;min-width:160px">
+        <strong style="color:#1d4ed8;font-size:13px" id="gcalBannerTitle">建議同步 Google 行事曆</strong>
+        <div style="color:#3b82f6;font-size:12px;margin-top:2px" id="gcalBannerDesc">每次開啟時同步，確保衝突偵測顯示最新資料</div>
       </div>
-      <button onclick="syncGoogleCalendar();document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 14px;border:none;border-radius:8px;background:#1a73e8;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap">🔄 立即同步</button>
-      <button onclick="document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 10px;border:1px solid #93c5fd;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap">略過</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="gcalBannerBtns">
+        <button onclick="syncGoogleCalendar();document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 14px;border:none;border-radius:8px;background:#1a73e8;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap">🔄 立即同步</button>
+        <button onclick="document.getElementById('gcalSyncBanner').style.display='none'" style="font-size:12px;padding:5px 10px;border:1px solid #93c5fd;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap">略過</button>
+      </div>
     </div>
 
     <div class="conflict-panel" id="conflictPanel" style="display:none">
@@ -3028,10 +3030,28 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // ═══════════════════════════════════════════════════════════════
 const GCAL_CLIENT_ID = '308729450984-dhrp780c6262cumep12o2e6q3491mvds.apps.googleusercontent.com';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly';
+const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 // 開啟行事曆頁面時自動嘗試同步（silent first, 失敗才顯示橫幅）
 function autoSyncCalendar() {
   const banner = document.getElementById('gcalSyncBanner');
+
+  // ── 手機版：不自動觸發 OAuth（會強制跳頁），改顯示說明橫幅 ──
+  if (_IS_MOBILE) {
+    if (banner) {
+      document.getElementById('gcalBannerIcon').textContent = '📱';
+      document.getElementById('gcalBannerTitle').textContent = '手機版行事曆同步';
+      document.getElementById('gcalBannerDesc').textContent =
+        '手機需經多步驟授權，建議在電腦 Chrome 同步後資料即更新。如需手機同步請點「立即同步」。';
+      banner.style.background = 'linear-gradient(135deg,#fefce8,#fef9c3)';
+      banner.style.borderColor = '#fde047';
+      document.getElementById('gcalBannerTitle').style.color = '#92400e';
+      document.getElementById('gcalBannerDesc').style.color = '#a16207';
+      banner.style.display = 'flex';
+    }
+    return;
+  }
+
   if (typeof google === 'undefined' || !google.accounts) {
     // GIS 尚未載入，顯示橫幅讓使用者手動點
     if (banner) banner.style.display = 'flex';
@@ -3170,7 +3190,8 @@ async function fetchGCalEvents(accessToken) {
 //    不需彈出視窗；若需使用者互動才顯示橫幅提示）
 // ─────────────────────────────────────────────────────────────
 window.onGoogleLibraryLoad = function() {
-  setTimeout(autoSyncCalendar, 800);
+  // 手機版不在頁面載入時自動觸發 OAuth（避免強制跳頁）
+  if (!_IS_MOBILE) setTimeout(autoSyncCalendar, 800);
 };
 
 </script>
