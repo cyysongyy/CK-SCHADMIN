@@ -3359,13 +3359,20 @@ async function autoLoadRecentMeetings() {
     const data = await res.json();
     if (data.error) { thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#ef4444">Drive 存取失敗</li>'; return; }
 
-    // 只留 .docx 並依檔名內的日期排序（格式：第N週-MMDD.docx）
+    // 今天的 MMDD（例：5/14 → 514）
+    const _now   = new Date();
+    const todayMMDD = (_now.getMonth() + 1) * 100 + _now.getDate();
+    // 從檔名 "第N週-MMDD.docx" 取出 MMDD（連字號後的4位數）
+    const getMMDD = n => { const m = n.match(/[-_](\d{4})(?:\.docx)?/i); return m ? +m[1] : 0; };
+
+    // 只留 .docx，且 MMDD ≤ 今天（排除未來空白範本）
     const docs = (data.files || [])
-      .filter(f => f.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-      .sort((a, b) => {
-        const getMMDD = n => { const m = n.match(/(\d{4})(?:\.docx)?/i); return m ? +m[1] : 0; };
-        return getMMDD(b.name) - getMMDD(a.name);
-      });
+      .filter(f => {
+        if (f.mimeType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return false;
+        const mmdd = getMMDD(f.name);
+        return mmdd > 0 && mmdd <= todayMMDD;
+      })
+      .sort((a, b) => getMMDD(b.name) - getMMDD(a.name)); // 最新在前
 
     if (docs.length === 0) { thisUl.innerHTML = '<li style="color:#94a3b8">尚無 .docx 檔案</li>'; return; }
 
@@ -3404,7 +3411,7 @@ async function fillCardDesktop(file, titleId, ulId, linkId) {
   const ul = document.getElementById(ulId);
   ul.innerHTML = points.length
     ? points.map(p => `<li>${escHtml(p)}</li>`).join('')
-    : '<li style="color:#94a3b8">（無法解析本檔案）</li>';
+    : '<li style="color:#94a3b8">（本週紀錄尚未填寫內容）</li>';
 }
 
 // ── 下載 .docx 並抽取報告重點 ────────────────────────────────
