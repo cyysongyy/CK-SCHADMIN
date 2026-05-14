@@ -228,6 +228,30 @@
   .score-b { color: #2563eb; }
   .score-c { color: #f59e0b; }
   .score-d { color: #ef4444; }
+
+  /* ── Meeting Records ── */
+  .meeting-year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .meeting-tab { padding: 8px 22px; border-radius: 20px; border: 2px solid #e2e8f0;
+    background: #fff; cursor: pointer; font-size: 14px; font-weight: 600;
+    color: #64748b; transition: all .2s; }
+  .meeting-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.3); }
+  .meeting-sem-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .meeting-sem-tab { padding: 6px 18px; border-radius: 16px; border: 1.5px solid #cbd5e1;
+    background: #f8fafc; cursor: pointer; font-size: 13px; font-weight: 600;
+    color: #64748b; transition: all .2s; }
+  .meeting-sem-tab.active { background: #0d9488; border-color: #0d9488; color: #fff; }
+  .meeting-type-block { margin-bottom: 24px; }
+  .meeting-type-title { font-size: 15px; font-weight: 700; color: #374151; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid #f1f5f9; }
+  .meeting-file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+  .meeting-file-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+    transition: all .2s; cursor: pointer; text-decoration: none; color: inherit; }
+  .meeting-file-card:hover { border-color: #2563eb; box-shadow: 0 3px 12px rgba(37,99,235,.12); transform: translateY(-2px); }
+  .meeting-file-icon { font-size: 30px; flex-shrink: 0; }
+  .meeting-file-name { font-size: 13px; font-weight: 600; color: #1e293b; line-height: 1.4; }
+  .meeting-file-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+  .meeting-loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -295,6 +319,9 @@
   </button>
   <button class="nav-item" onclick="showPage('staff',this)">
     <span class="nav-icon">👩‍🏫</span> 教職員名冊
+  </button>
+  <button class="nav-item" onclick="showPage('meeting',this)">
+    <span class="nav-icon">📑</span> 會議記錄
   </button>
   <div class="nav-section">雲端資源</div>
   <button class="nav-item" onclick="showPage('drive',this)">
@@ -827,6 +854,42 @@
     <div class="panel" style="margin-top:20px">
       <div class="panel-header"><span class="panel-title">📅 本學期 SEL 行事曆</span></div>
       <div class="panel-body" id="selCalList"></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════ MEETING RECORDS -->
+  <section class="page" id="page-meeting">
+    <div class="page-title">📑 會議記錄
+      <a href="https://drive.google.com/drive/folders/1BUeIuZIi9I2kZ_x4doj7NpLck_q9CjAb"
+         target="_blank" class="btn btn-outline btn-sm"
+         style="margin-left:auto;font-size:12px;text-decoration:none">☁️ 開啟 Drive 資料夾</a>
+    </div>
+
+    <!-- 需授權提示 -->
+    <div id="meetingAuthNotice" style="display:none;background:#fffbeb;border:1px solid #f59e0b;
+         border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:14px;
+         align-items:center;gap:12px">
+      ⚠️ 需要先授權 Google 帳號才能顯示 Drive 檔案清單。
+      <button class="btn btn-sm" style="background:#f59e0b;color:#fff;white-space:nowrap"
+              onclick="syncGoogleCalendar()">🔑 授權登入</button>
+    </div>
+
+    <!-- 學年度 tabs -->
+    <div class="meeting-year-tabs" id="meetingYearTabs">
+      <button class="meeting-tab active" onclick="switchMeetingYear('114',this)">114學年度</button>
+      <button class="meeting-tab" onclick="switchMeetingYear('113',this)">113學年度</button>
+      <button class="meeting-tab" onclick="switchMeetingYear('112',this)">112學年度</button>
+    </div>
+
+    <!-- 學期 tabs -->
+    <div class="meeting-sem-tabs" id="meetingSemTabs">
+      <button class="meeting-sem-tab" onclick="switchMeetingSem('上學期',this)">上學期</button>
+      <button class="meeting-sem-tab active" onclick="switchMeetingSem('下學期',this)">下學期</button>
+    </div>
+
+    <!-- 檔案列表 -->
+    <div id="meetingContent">
+      <div class="meeting-loading">⏳ 載入中...</div>
     </div>
   </section>
 
@@ -1616,6 +1679,7 @@ function showPage(id, el) {
   if(id==='sel') renderSelPage();
   if(id==='drive') renderDrivePage();
   if(id==='staff') renderStaffPage();
+  if(id==='meeting') renderMeetingContent();
 }
 
 function printPage() { window.print(); }
@@ -3029,7 +3093,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 //  GOOGLE CALENDAR OAuth 同步
 // ═══════════════════════════════════════════════════════════════
 const GCAL_CLIENT_ID = '308729450984-dhrp780c6262cumep12o2e6q3491mvds.apps.googleusercontent.com';
-const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly';
+const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.metadata.readonly';
 const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 // 開啟行事曆頁面時自動嘗試同步（silent first, 失敗才顯示橫幅）
@@ -3087,41 +3151,59 @@ function syncGoogleCalendar() {
 }
 
 async function fetchGCalEvents(accessToken) {
+  _gToken = accessToken; // 存全域，供會議記錄 Drive API 使用
   const btn     = document.getElementById('gcalSyncBtn');
   const syncEl  = document.getElementById('conflictSyncLabel');
   if (btn) btn.textContent = '⏳ 同步中...';
 
   try {
-    const now      = new Date();
-    // 抓取本年度 1/1 ～ 下年度 12/31，確保整個學年資料齊全
-    const timeMin  = new Date(now.getFullYear(), 0, 1).toISOString();
-    const timeMax  = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
-    // ① 先取得所有行事曆清單（包含子行事曆）
-    const calListRes  = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
-                          { headers: { Authorization: 'Bearer ' + accessToken } });
-    const calListData = await calListRes.json();
-    if (calListData.error) { alert('取得行事曆清單失敗：' + calListData.error.message); return; }
+    const now = new Date();
 
-    // 過濾掉假日／生日等雜訊行事曆，只保留使用者有勾選的行事曆
-    const calendars = (calListData.items || []).filter(c =>
-      c.selected !== false &&
-      !c.id.includes('#holiday@') &&
-      !c.id.includes('#contacts@')
-    );
+    // ── 手機版：只抓 primary，前後6個月，避免記憶體過載當掉 ──
+    // ── 電腦版：抓所有子行事曆，整年範圍，完整資料 ──
+    const timeMin = _IS_MOBILE
+      ? new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString()
+      : new Date(now.getFullYear(), 0, 1).toISOString();
+    const timeMax = _IS_MOBILE
+      ? new Date(now.getFullYear(), now.getMonth() + 6, 0, 23, 59, 59).toISOString()
+      : new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
+    const maxRes = _IS_MOBILE ? 300 : 2500;
 
-    // ② 逐一從每個行事曆抓取事件，用 event id 去除重複
-    const seenIds = new Set();
     let allItems = [];
-    for (const cal of calendars) {
-      const calId = encodeURIComponent(cal.id);
-      const url   = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`
-                  + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=2500`;
-      const res   = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
-      const data  = await res.json();
-      if (!data.error && data.items) {
-        data.items.forEach(item => {
-          if (!seenIds.has(item.id)) { seenIds.add(item.id); allItems.push(item); }
-        });
+    const seenIds = new Set();
+
+    if (_IS_MOBILE) {
+      // 手機：只抓 primary，省記憶體
+      const url  = `https://www.googleapis.com/calendar/v3/calendars/primary/events`
+                 + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=${maxRes}`;
+      const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+      const data = await res.json();
+      if (data.error) { alert('取得行事曆失敗：' + data.error.message); return; }
+      allItems = data.items || [];
+    } else {
+      // 電腦：抓所有子行事曆
+      const calListRes  = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
+                            { headers: { Authorization: 'Bearer ' + accessToken } });
+      const calListData = await calListRes.json();
+      if (calListData.error) { alert('取得行事曆清單失敗：' + calListData.error.message); return; }
+
+      const calendars = (calListData.items || []).filter(c =>
+        c.selected !== false &&
+        !c.id.includes('#holiday@') &&
+        !c.id.includes('#contacts@')
+      );
+
+      for (const cal of calendars) {
+        const calId = encodeURIComponent(cal.id);
+        const url   = `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`
+                    + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=${maxRes}`;
+        const res   = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+        const data  = await res.json();
+        if (!data.error && data.items) {
+          data.items.forEach(item => {
+            if (!seenIds.has(item.id)) { seenIds.add(item.id); allItems.push(item); }
+          });
+        }
       }
     }
 
@@ -3177,6 +3259,129 @@ async function fetchGCalEvents(accessToken) {
 window.onGoogleLibraryLoad = function() {
   setTimeout(autoSyncCalendar, 800);
 };
+
+// ═══════════════════════════════════════════════════════════════
+//  MEETING RECORDS — 辰光會議 Google Drive 連結
+// ═══════════════════════════════════════════════════════════════
+let _gToken = null; // 全域 Google OAuth token（Calendar sync 後設定）
+
+const MEETING_FOLDERS = {
+  '114': {
+    '上學期': {
+      '📋 校務會議': '1Kks4LjnNH7B84nu205Az4mZDhNR5d93M',
+      '📅 每週夕會': '15_YDfSE7diPAtPYrxutWqGwl1-8ei5IO',
+    },
+    '下學期': {
+      '📋 校務會議': '1eSpoXLCGjJ8V59XH3mT52y5IthtQo45V',
+      '📅 每週夕會': '1FAb8TBPYhbroQIigcUYjHqzasAX20sC6',
+    }
+  },
+  '113': {
+    '上學期': {
+      '📋 校務會議': '1cCSXQtE7zpdcggYciG2zA9L_LZRM49jK',
+      '📅 每週夕會': '1TPoGRh80cZSt2rEBSCzTBxiBobnVcOrn',
+    },
+    '下學期': {
+      '📋 校務會議': '1tn1bVsWnxKnBF9uYInzFrIxIxwD4Omyf',
+      '📅 每週夕會': '1IzhkYgZjv20EAu60iD3ChSoGTZ1kFBmJ',
+    }
+  },
+  '112': { '上學期': {}, '下學期': {} }
+};
+// 113學年度根層有一個額外 PDF
+const MEETING_EXTRA = {
+  '113': { '': [{ name: '114上期末-20250120期末校務會議', mimeType: 'application/pdf',
+    webViewLink: 'https://drive.google.com/file/d/1xSPU9IdN_3nBDLE9yi1UFF-NPq28Ql3n/view', modifiedTime: '2025-01-20' }] }
+};
+
+let _meetingYear  = '114';
+let _meetingSem   = '下學期';
+let _meetingCache = {}; // folderId → files[]
+
+function switchMeetingYear(year, el) {
+  _meetingYear = year;
+  document.querySelectorAll('#meetingYearTabs .meeting-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderMeetingContent();
+}
+function switchMeetingSem(sem, el) {
+  _meetingSem = sem;
+  document.querySelectorAll('#meetingSemTabs .meeting-sem-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderMeetingContent();
+}
+
+async function renderMeetingContent() {
+  const content    = document.getElementById('meetingContent');
+  const authNotice = document.getElementById('meetingAuthNotice');
+  if (!content) return;
+
+  if (!_gToken) {
+    if (authNotice) { authNotice.style.display = 'flex'; }
+    content.innerHTML = `<div class="empty-state">
+      <div class="icon">🔑</div>
+      <div>請先同步 Google 行事曆（點擊上方「授權登入」）<br>授權後即可自動顯示 Drive 檔案清單</div>
+    </div>`;
+    return;
+  }
+  if (authNotice) authNotice.style.display = 'none';
+
+  const yearData = MEETING_FOLDERS[_meetingYear];
+  const semData  = yearData && yearData[_meetingSem];
+
+  if (!semData || Object.keys(semData).length === 0) {
+    content.innerHTML = `<div class="empty-state"><div class="icon">📂</div><div>此學期尚無建立資料夾</div></div>`;
+    return;
+  }
+
+  content.innerHTML = '<div class="meeting-loading">⏳ 從 Google Drive 載入檔案清單...</div>';
+
+  let html = '';
+  for (const [typeName, folderId] of Object.entries(semData)) {
+    const files = await getMeetingFiles(folderId);
+    const cards = files.length
+      ? files.map(f => meetingFileCard(f)).join('')
+      : '<div style="color:#94a3b8;font-size:13px;padding:8px 0">（尚無檔案）</div>';
+    html += `<div class="meeting-type-block">
+      <div class="meeting-type-title">${typeName}</div>
+      <div class="meeting-file-grid">${cards}</div>
+    </div>`;
+  }
+  content.innerHTML = html || '<div class="empty-state"><div class="icon">📂</div><div>沒有找到檔案</div></div>';
+}
+
+function meetingFileCard(f) {
+  const icon = f.mimeType === 'application/pdf' ? '📄'
+    : f.mimeType.includes('presentation') ? '📊'
+    : f.mimeType.includes('spreadsheet')  ? '📊'
+    : '📝';
+  const ext  = f.mimeType === 'application/pdf' ? 'PDF' : 'Word';
+  const name = f.name.replace(/\.[^.]+$/, '').trim();
+  const date = f.modifiedTime
+    ? new Date(f.modifiedTime).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
+    : '';
+  return `<a class="meeting-file-card" href="${f.webViewLink}" target="_blank" title="${name}">
+    <span class="meeting-file-icon">${icon}</span>
+    <div>
+      <div class="meeting-file-name">${name}</div>
+      <div class="meeting-file-meta">${ext}${date ? ' · 修改：' + date : ''}</div>
+    </div>
+  </a>`;
+}
+
+async function getMeetingFiles(folderId) {
+  if (_meetingCache[folderId]) return _meetingCache[folderId];
+  try {
+    const q   = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,webViewLink,modifiedTime)&orderBy=name&pageSize=100`;
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + _gToken } });
+    const data = await res.json();
+    if (data.error) { console.warn('Drive API error:', data.error); return []; }
+    const files = (data.files || []).filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+    _meetingCache[folderId] = files;
+    return files;
+  } catch (e) { console.warn('Drive fetch error:', e); return []; }
+}
 
 </script>
 </body>
