@@ -197,6 +197,11 @@
     .main { margin-left: 0; }
     .dash-grid { grid-template-columns: 1fr; }
   }
+  /* ── 手機版：隱藏 Google 行事曆同步相關元素 ── */
+  @media (max-width: 800px) {
+    #gcalSyncBanner { display: none !important; }
+    #gcalSyncBtn    { display: none !important; }
+  }
 
   /* ── Print ── */
   @media print {
@@ -3036,19 +3041,13 @@ const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAge
 function autoSyncCalendar() {
   const banner = document.getElementById('gcalSyncBanner');
 
-  // ── 手機版：不自動觸發 OAuth（會強制跳頁），改顯示說明橫幅 ──
+  // ── 手機版：完全隱藏同步橫幅與按鈕，顯示靜態說明文字 ──
   if (_IS_MOBILE) {
-    if (banner) {
-      document.getElementById('gcalBannerIcon').textContent = '📱';
-      document.getElementById('gcalBannerTitle').textContent = '手機版行事曆同步';
-      document.getElementById('gcalBannerDesc').textContent =
-        '手機需經多步驟授權，建議在電腦 Chrome 同步後資料即更新。如需手機同步請點「立即同步」。';
-      banner.style.background = 'linear-gradient(135deg,#fefce8,#fef9c3)';
-      banner.style.borderColor = '#fde047';
-      document.getElementById('gcalBannerTitle').style.color = '#92400e';
-      document.getElementById('gcalBannerDesc').style.color = '#a16207';
-      banner.style.display = 'flex';
-    }
+    if (banner) banner.style.display = 'none';
+    const syncBtn = document.getElementById('gcalSyncBtn');
+    if (syncBtn) syncBtn.style.display = 'none';
+    const syncEl = document.getElementById('conflictSyncLabel');
+    if (syncEl) syncEl.textContent = '📱 個人行事曆同步請至電腦版 Chrome';
     return;
   }
 
