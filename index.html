@@ -1894,13 +1894,16 @@ function renderDashboard() {
     </div>`).join('') :
     '<div class="empty-state" style="padding:20px">✅ 所有業務皆已完成</div>';
 
-  // Grade bar chart
-  const gradeNames = ['一年級','二年級','三年級','四年級','五年級','六年級'];
+  // Grade bar chart — filter by cls (e.g. '1年甲班') and current year/semester
+  const _barLabels = ['一','二','三','四','五','六'];
   const colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'];
-  const barData = gradeNames.map((g,i)=>{
-    const gs = grades.filter(gr=>gr.grade===g);
+  const _dashYr  = currentGradeYear;
+  const _dashSem = currentGradeSemester;
+  const barData = _barLabels.map((g,i)=>{
+    const cls = `${i+1}年甲班`;
+    const gs  = grades.filter(gr => gr.cls===cls && gr.year===_dashYr && gr.semester===_dashSem);
     const avg = gs.length ? Math.round(gs.reduce((a,b)=>a+b.score,0)/gs.length) : 0;
-    return {label:g.replace('年級',''),avg,color:colors[i]};
+    return {label:g, avg, color:colors[i]};
   });
   const maxVal = Math.max(...barData.map(d=>d.avg), 1);
   document.getElementById('dashChart').innerHTML = barData.map(d=>`
