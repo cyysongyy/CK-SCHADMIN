@@ -905,7 +905,13 @@
 
     <!-- 行事曆連結 -->
     <div class="panel" style="margin-top:20px">
-      <div class="panel-header"><span class="panel-title">📅 本學期 SEL 行事曆</span></div>
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="panel-title">📅 本學期 SEL 行事曆</span>
+        <a href="https://drive.google.com/drive/folders/19uiWe851TzWUdITNvESurnxCoSSgDEVE" target="_blank"
+           style="font-size:12px;color:#3b82f6;text-decoration:none;padding:3px 10px;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff">
+          📂 Drive資料夾
+        </a>
+      </div>
       <div class="panel-body" id="selCalList"></div>
     </div>
   </section>
@@ -1527,6 +1533,59 @@ let events = [
   {id:87,  name:'輔導團專業對話',               date:'2026-06-12', type:'行政', src:'gcal-personal', desc:'輔導團專業對話'},
   {id:88,  name:'雲菁計畫第二梯次｜結業式',      date:'2026-07-02', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 結業式 09:00-14:00（線上 Meet）'},
   {id:89,  name:'TFT明日學校 辰光梯次（起）',    date:'2026-07-20', type:'活動', src:'gcal-personal', desc:'TFT 2026 夏季明日學校 辰光梯次 07/20-07/29，地點：雲林辰光國小'},
+];
+
+// ── SEL 行事曆資料（來源：Google Drive 114上/下行事曆.docx，每學期初更新）──
+// Drive 資料夾：https://drive.google.com/drive/folders/19uiWe851TzWUdITNvESurnxCoSSgDEVE
+// 欄位：id, week, date, cat(雙語晨會|校本SEL|品德圍圈|SEL參訪), domain, name, desc, sem, yr, semN
+const SEL_CAL_DATA = [
+  // ── 114學年度第一學期（來源：114上行事曆.docx）──
+  {id:201,week:2,date:'2025-08-31',cat:'雙語晨會',domain:'自我覺察',name:'情緒表達便利貼牆（I feel... because...）',desc:'自我覺察雙語活動：情緒表達便利貼牆',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:202,week:2,date:'2025-08-31',cat:'品德圍圈',domain:'品德教育',name:'感恩週：陳永芝（1-3）、吳惠雅（4-6）',desc:'9/4感恩週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:203,week:3,date:'2025-09-07',cat:'雙語晨會',domain:'自我覺察',name:'自我介紹雙語任務（My name is... I like...）',desc:'自我覺察雙語任務',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:204,week:3,date:'2025-09-07',cat:'品德圍圈',domain:'品德教育',name:'感恩週：黃雅玲（1-3）、陳英曉（4-6）',desc:'9/11感恩週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:205,week:4,date:'2025-09-14',cat:'雙語晨會',domain:'自我覺察',name:'雙語小對話練習（Can you help me? May I borrow...?）',desc:'自我覺察雙語對話練習',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:206,week:4,date:'2025-09-14',cat:'校本SEL',domain:'自我覺察',name:'自我覺察主題週（9/15-9/21）',desc:'校本SEL：自我覺察核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:207,week:4,date:'2025-09-14',cat:'品德圍圈',domain:'品德教育',name:'熱情週：蔡幸華（1-3）、陳彥揚（4-6）',desc:'9/18熱情週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:208,week:5,date:'2025-09-21',cat:'雙語晨會',domain:'自我覺察',name:'情緒紅綠燈活動（用紅黃綠卡表達心情+英語詞彙）',desc:'自我覺察：情緒紅綠燈雙語活動',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:209,week:5,date:'2025-09-21',cat:'校本SEL',domain:'自我覺察',name:'自我覺察主題週（9/22-9/28）',desc:'校本SEL：自我覺察核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:210,week:5,date:'2025-09-21',cat:'品德圍圈',domain:'品德教育',name:'熱情週：黃于玲（1-3）、張曉鈴（4-6）',desc:'9/25熱情週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:211,week:6,date:'2025-09-28',cat:'雙語晨會',domain:'自我覺察',name:'雙語合作解謎遊戲（分組完成任務卡，用英語分工）',desc:'自我覺察：雙語合作解謎',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:212,week:6,date:'2025-09-28',cat:'校本SEL',domain:'自我管理',name:'自我管理主題週（9/29-10/5）',desc:'校本SEL：自我管理核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:213,week:6,date:'2025-09-28',cat:'品德圍圈',domain:'品德教育',name:'自制週：林瑞芳（1-3）、王瑞明（4-6）',desc:'10/2自制週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:214,week:7,date:'2025-10-05',cat:'雙語晨會',domain:'自我覺察',name:'雙語心情日記（每天寫一句中英感受）',desc:'自我覺察：雙語心情日記',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:215,week:7,date:'2025-10-05',cat:'校本SEL',domain:'自我管理',name:'自我管理主題週（10/6-10/12）',desc:'校本SEL：自我管理核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:216,week:7,date:'2025-10-05',cat:'品德圍圈',domain:'品德教育',name:'自制週：楊凱棋（1-3）、王怡文（4-6）',desc:'10/9自制週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:217,week:8,date:'2025-10-12',cat:'雙語晨會',domain:'自我管理',name:'校園雙語廣播（Good morning! 校園提醒）',desc:'自我管理/負責任的決定：雙語廣播活動',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:218,week:8,date:'2025-10-12',cat:'校本SEL',domain:'社會覺察',name:'社會覺察主題週（10/13-10/19）',desc:'校本SEL：社會覺察核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:219,week:8,date:'2025-10-12',cat:'品德圍圈',domain:'品德教育',name:'堅毅週：陳永芝（1-3）、吳惠雅（4-6）',desc:'10/16堅毅週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:220,week:9,date:'2025-10-26',cat:'雙語晨會',domain:'自我管理',name:'互助小幫手活動（Can I help you?）',desc:'自我管理：雙語互助小幫手',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:221,week:9,date:'2025-10-26',cat:'品德圍圈',domain:'品德教育',name:'堅毅週：黃雅玲（1-3）、陳英曉（4-6）',desc:'10/30堅毅週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:222,week:11,date:'2025-11-09',cat:'雙語晨會',domain:'自我管理',name:'分享最喜歡的東西（I like... because...）',desc:'自我管理：雙語分享活動',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:223,week:12,date:'2025-11-16',cat:'雙語晨會',domain:'社會覺察',name:'雙語感謝牆（Thank you for... 因為...）',desc:'社會覺察：雙語感謝牆活動',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:224,week:12,date:'2025-11-16',cat:'校本SEL',domain:'社會覺察',name:'社會覺察主題週（11/17-11/23）',desc:'校本SEL：社會覺察核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:225,week:12,date:'2025-11-16',cat:'品德圍圈',domain:'品德教育',name:'感恩週：蔡幸華（1-3）、陳彥揚（4-6）',desc:'11/20感恩週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:226,week:13,date:'2025-11-23',cat:'雙語晨會',domain:'自我管理',name:"雙語運動挑戰（Let's run! Pass the ball!）",desc:'自我管理：雙語運動挑戰',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:227,week:13,date:'2025-11-23',cat:'校本SEL',domain:'關係技巧',name:'關係技巧主題週（11/24-11/30）',desc:'校本SEL：關係技巧核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:228,week:13,date:'2025-11-23',cat:'品德圍圈',domain:'品德教育',name:'感恩週：黃于玲（1-3）、張曉鈴（4-6）',desc:'11/27感恩週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:229,week:14,date:'2025-11-30',cat:'雙語晨會',domain:'社會覺察',name:'校園任務導覽（This is the library... 這是圖書館）',desc:'社會覺察：校園雙語導覽',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:230,week:14,date:'2025-11-30',cat:'校本SEL',domain:'關係技巧',name:'關係技巧主題週（12/1-12/7）',desc:'校本SEL：關係技巧核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:231,week:14,date:'2025-11-30',cat:'品德圍圈',domain:'品德教育',name:'熱情週：林瑞芳（1-3）、王瑞明（4-6）',desc:'12/4熱情週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:232,week:15,date:'2025-12-07',cat:'雙語晨會',domain:'關係技巧',name:'雙語合作專案（小組設計海報，用中英展示）',desc:'社會覺察/關係技巧：雙語合作專案',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:233,week:15,date:'2025-12-07',cat:'校本SEL',domain:'負責任的決定',name:'負責任的決定主題週（12/8-12/14）',desc:'校本SEL：負責任的決定核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:234,week:15,date:'2025-12-07',cat:'品德圍圈',domain:'品德教育',name:'熱情週：楊凱棋（1-3）、王怡文（4-6）',desc:'12/11熱情週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:235,week:16,date:'2025-12-14',cat:'雙語晨會',domain:'關係技巧',name:'自我介紹雙語任務（My name is... I like...）',desc:'社會覺察/關係技巧：雙語自我介紹',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:236,week:16,date:'2025-12-14',cat:'校本SEL',domain:'負責任的決定',name:'負責任的決定主題週（12/15-12/21）',desc:'校本SEL：負責任的決定核心能力週',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:237,week:16,date:'2025-12-14',cat:'品德圍圈',domain:'品德教育',name:'自制週：陳永芝（1-3）、吳惠雅（4-6）',desc:'12/18自制週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:238,week:17,date:'2025-12-21',cat:'雙語晨會',domain:'關係技巧',name:'雙語成果展覽 & 心得分享（We learned... 我們學到...）',desc:'社會覺察/關係技巧：雙語成果展覽',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:239,week:18,date:'2025-12-28',cat:'雙語晨會',domain:'關係技巧',name:'雙語小對話練習（Can you help me?）',desc:'關係技巧/自我管理：雙語對話練習',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:240,week:19,date:'2026-01-04',cat:'雙語晨會',domain:'關係技巧',name:'情緒紅綠燈活動（用紅黃綠卡表達心情+英語詞彙）',desc:'關係技巧：情緒紅綠燈複習',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:241,week:19,date:'2026-01-04',cat:'品德圍圈',domain:'品德教育',name:'自制週：黃雅玲（1-3）、陳英曉（4-6）',desc:'1/8自制週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  {id:242,week:21,date:'2026-01-18',cat:'品德圍圈',domain:'品德教育',name:'堅毅週：蔡幸華（1-3）、陳彥揚（4-6）',desc:'1/22堅毅週品德圍圈',sem:'114學年度第一學期',yr:114,semN:1},
+  // ── 114學年度第二學期（SEL參訪記錄，114下行事曆.docx 欄位未填）──
+  {id:243,week:2, date:'2026-03-03',cat:'SEL參訪',domain:'SEL',name:'斗六教研SEL參訪',desc:'斗六教研中心SEL課程參訪交流',sem:'114學年度第二學期',yr:114,semN:2},
+  {id:244,week:5, date:'2026-03-27',cat:'SEL參訪',domain:'SEL',name:'宏崙國小SEL參訪',desc:'宏崙國小SEL課程參訪交流',sem:'114學年度第二學期',yr:114,semN:2},
+  {id:245,week:9, date:'2026-04-22',cat:'SEL參訪',domain:'SEL',name:'水燦林SEL參訪',desc:'水燦林SEL課程參訪交流',sem:'114學年度第二學期',yr:114,semN:2},
 ];
 
 // ── 真實學生名冊（來源：114學年度第2學期各班成績表.xlsx）──
@@ -2939,31 +2998,48 @@ function _currentSemesterRange() {
 
 function renderSelCalList() {
   const { start, end, yr, sem } = _currentSemesterRange();
-  const selEvts = events
-    .filter(e => e.type==='SEL' && e.date>=start && e.date<=end)
-    .sort((a,b) => a.date.localeCompare(b.date));
+  const semLabel = `${yr}學年度第${sem==='1'?'一':'二'}學期`;
   const now = today.toISOString().slice(0,10);
 
   // 動態更新面板標題
   const titleEl = document.querySelector('#selCalList')?.closest('.panel')?.querySelector('.panel-title');
-  if (titleEl) titleEl.textContent = `📅 ${yr}學年度第${sem}學期 SEL 行事曆`;
+  if (titleEl) titleEl.textContent = `📅 ${semLabel} SEL 行事曆`;
+
+  // 以 SEL_CAL_DATA 為主要資料來源（依 Drive docx 更新），日期範圍篩選
+  const selEvts = SEL_CAL_DATA
+    .filter(e => e.sem === semLabel && e.date >= start && e.date <= end)
+    .sort((a,b) => a.date.localeCompare(b.date) || (a.week||0)-(b.week||0));
+
+  // 類別樣式
+  const catStyle = {
+    '雙語晨會': {bg:'#eff6ff', border:'#93c5fd', badge:'#1d4ed8', icon:'🗣️'},
+    '校本SEL':  {bg:'#f0fdf4', border:'#86efac', badge:'#15803d', icon:'🌱'},
+    '品德圍圈': {bg:'#fdf4ff', border:'#d8b4fe', badge:'#7e22ce', icon:'💎'},
+    'SEL參訪':  {bg:'#fff7ed', border:'#fdba74', badge:'#c2410c', icon:'🚌'},
+  };
 
   document.getElementById('selCalList').innerHTML = selEvts.length ?
-    `<div style="display:flex;flex-wrap:wrap;gap:12px">`+
-    selEvts.map(e=>{
+    `<div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0">` +
+    selEvts.map(e => {
       const [ey,em,ed] = e.date.split('-');
-      const isPast = e.date < now;
-      const isToday = e.date === now;
-      const borderColor = isToday ? '#dc2626' : isPast ? '#e2e8f0' : '#99f6e4';
-      const bg = isToday ? '#fff1f2' : isPast ? '#f8fafc' : '#f0fdf9';
-      return `<div style="background:${bg};border:1px solid ${borderColor};border-radius:10px;padding:14px 16px;min-width:180px;max-width:220px">
-        <div style="font-size:12px;color:${isToday?'#dc2626':'#64748b'};font-weight:${isToday?700:400}">${ey}年${+em}月${+ed}日${isToday?' 📍今天':''}</div>
-        <div style="font-weight:700;font-size:15px;margin:4px 0;color:${isToday?'#dc2626':'inherit'}">${e.name}</div>
-        <div style="font-size:12px;color:#64748b">${e.desc||''}</div>
-        <div style="margin-top:8px"><span class="badge type-SEL">SEL</span> ${isPast&&!isToday?'<span class="badge badge-gray" style="font-size:10px">已過期</span>':''}</div>
+      const isPast   = e.date < now;
+      const isToday  = e.date === now;
+      const cs = catStyle[e.cat] || {bg:'#f0fdf9',border:'#99f6e4',badge:'#0f766e',icon:'📌'};
+      const bdr = isToday ? '#dc2626' : isPast ? '#e2e8f0' : cs.border;
+      const bg  = isToday ? '#fff1f2' : isPast ? '#f8fafc' : cs.bg;
+      const txtColor = isToday ? '#dc2626' : '#1e293b';
+      return `<div style="background:${bg};border:1.5px solid ${bdr};border-radius:10px;padding:11px 14px;min-width:185px;max-width:235px">
+        <div style="font-size:11px;color:${isToday?'#dc2626':'#64748b'};margin-bottom:3px">第${e.week||'?'}週・${ey}年${+em}月${+ed}日${isToday?' 📍今天':''}</div>
+        <div style="font-weight:700;font-size:14px;line-height:1.4;color:${txtColor};margin:3px 0 5px">${e.name}</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:6px">${e.desc||''}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <span style="background:${cs.badge};color:#fff;font-size:10px;padding:1px 7px;border-radius:9px">${cs.icon} ${e.cat}</span>
+          <span style="background:#e2e8f0;color:#475569;font-size:10px;padding:1px 7px;border-radius:9px">${e.domain}</span>
+          ${isPast&&!isToday?'<span style="background:#f1f5f9;color:#94a3b8;font-size:10px;padding:1px 7px;border-radius:9px">已過</span>':''}
+        </div>
       </div>`;
-    }).join('')+'</div>' :
-    `<div class="empty-state">本學期（${yr}學年度第${sem}學期）尚無 SEL 活動，請至學校行事曆新增類型為 SEL 的活動</div>`;
+    }).join('') + '</div>' :
+    `<div class="empty-state">${semLabel} 尚無 SEL 行事曆資料。<br>請將新學期的行事曆 docx 上傳至 <a href="https://drive.google.com/drive/folders/19uiWe851TzWUdITNvESurnxCoSSgDEVE" target="_blank">Drive 資料夾</a>，每學期初（9月/2月）由 Claude 更新。</div>`;
 }
 
 function openSelModal() {
