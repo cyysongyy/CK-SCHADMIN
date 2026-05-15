@@ -539,23 +539,18 @@
         <div class="panel-header">
           <span class="panel-title" id="inputPanelTitle">批次輸入成績</span>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select class="form-control" style="width:120px;padding:5px 8px" id="inputSubject">
-              <option>國語</option><option>數學</option><option>英語</option>
-              <option>自然</option><option>社會</option><option>生活</option>
-              <option>體育</option><option>音樂</option><option>視覺藝術</option>
-            </select>
             <input type="date" class="form-control" style="width:140px;padding:5px 8px" id="inputDate">
             <button class="btn btn-success btn-sm" onclick="saveAllInputScores()">💾 儲存全班</button>
           </div>
         </div>
-        <table>
-          <thead>
-            <tr><th style="width:50px">座號</th><th>學號</th><th>姓名</th><th style="width:140px">分數（0-100）</th><th style="width:80px">等第</th><th>備註</th></tr>
-          </thead>
-          <tbody id="inputTableBody"></tbody>
-        </table>
+        <div style="overflow-x:auto">
+          <table id="inputTable">
+            <thead id="inputTableHead"></thead>
+            <tbody id="inputTableBody"></tbody>
+          </table>
+        </div>
         <div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b">
-          💡 直接在分數欄輸入數字，按 Tab 跳下一位，Enter 快速儲存
+          💡 直接在分數欄輸入數字，按 Tab 跳至下一格，Enter 快速儲存全班
         </div>
       </div>
     </div>
@@ -2142,85 +2137,123 @@ function renderGradeView() {
   else        renderGradeFinal();
 }
 
-// ── 批次輸入（第一 / 第二階段）──
+// ── 批次輸入（第一 / 第二階段）── 多科目同時輸入
+const INPUT_SUBJ_MAP = {
+  '1年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+  '2年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
+  '3年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  '4年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  '5年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  '6年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+};
+
 function renderGradeInput() {
-  const cls   = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
-  const stage = currentGradeStage;
+  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+  const stage    = currentGradeStage;
   const stageLabel = stage === '1' ? '第一階段' : '第二階段';
-  const yr  = document.getElementById('gradeYear')?.value || currentGradeYear;
+  const yr  = document.getElementById('gradeYear')?.value  || currentGradeYear;
   const sem = document.getElementById('gradeSemester')?.value || currentGradeSemester;
   document.getElementById('inputPanelTitle').textContent =
     `${yr}學年度 第${sem}學期 ${cls} ── ${stageLabel} 批次輸入`;
-  const subject = document.getElementById('inputSubject').value;
-  const roster  = STUDENT_ROSTER.filter(s => s.cls === cls);
+
+  const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
+  const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
+
+  // ── 動態表頭 ──
+  const thead = document.getElementById('inputTableHead');
+  if(thead) {
+    thead.innerHTML =
+      `<tr style="background:#1e3a5f;color:#fff;font-size:13px">
+        <th style="width:44px;text-align:center;padding:8px 4px;white-space:nowrap">座號</th>
+        <th style="padding:8px 4px;font-size:11px;white-space:nowrap">學號</th>
+        <th style="padding:8px 10px;white-space:nowrap">姓名</th>
+        ${subjects.map(s=>`<th colspan="2" style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">${s}</th>`).join('')}
+      </tr>
+      <tr style="background:#2e5090;color:#fff;font-size:11px">
+        <th></th><th></th><th></th>
+        ${subjects.map(()=>`
+          <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd;white-space:nowrap">成績</th>
+          <th style="padding:4px 6px;text-align:center;white-space:nowrap">等第</th>`).join('')}
+      </tr>`;
+  }
+
+  // ── 資料列 ──
   document.getElementById('inputTableBody').innerHTML = roster.map(s => {
-    const existing = grades.find(g =>
-      g.sid===s.sid && g.subject===subject &&
-      g.year===yr && g.semester===sem && g.stage===stage
-    );
-    const sc  = existing ? existing.score : '';
-    const sg  = sc !== '' ? scoreGradeLabel(sc) : null;
+    const cells = subjects.map(subj => {
+      const existing = grades.find(g =>
+        g.sid===s.sid && g.subject===subj &&
+        g.year===yr && g.semester===sem && g.stage===stage);
+      const sc  = existing !== undefined ? existing.score : '';
+      const sg  = sc !== '' ? scoreGradeLabel(sc) : null;
+      const bc  = sc !== '' ? (sc < 60 ? '#ef4444' : '#10b981') : '#d1d5db';
+      return `<td style="border-left:2px solid #e2e8f0;padding:3px 4px;text-align:center">
+          <input type="number" id="sc_${s.sid}_${subj.replace(/\s/g,'_')}" value="${sc}"
+            min="0" max="100"
+            style="width:62px;text-align:center;font-size:15px;font-weight:700;padding:3px 2px;
+                   border:2px solid ${bc};border-radius:6px;background:#fff;display:block;margin:auto"
+            oninput="updateCellGrade('${s.sid}','${subj}')"
+            onkeydown="if(event.key==='Enter'){saveAllInputScores()}">
+        </td>
+        <td id="gd_${s.sid}_${subj.replace(/\s/g,'_')}" style="text-align:center;padding:2px 4px;white-space:nowrap">
+          ${sg ? `<span class="badge ${sg.bc}" style="font-size:11px">${sg.label}</span>` : ''}
+        </td>`;
+    }).join('');
     return `<tr>
-      <td style="text-align:center;color:#94a3b8">${s.seat}</td>
-      <td style="font-size:12px;color:#94a3b8">${s.sid}</td>
-      <td style="font-weight:600">${s.name}</td>
-      <td>
-        <input type="number" id="sc_${s.sid}" value="${sc}"
-          min="0" max="100" class="form-control" style="width:110px;text-align:center;font-size:18px;font-weight:700;padding:4px 8px;${sc!==''&&sc<60?'border-color:#ef4444;':sc!==''?'border-color:#10b981;':''}"
-          oninput="updateRowGrade('${s.sid}')"
-          onkeydown="if(event.key==='Enter'){saveAllInputScores()}">
-      </td>
-      <td id="gd_${s.sid}" style="text-align:center">
-        ${sg ? `<span class="badge ${sg.bc}" style="font-size:14px">${sg.label}</span>` : ''}
-      </td>
-      <td><input type="text" id="note_${s.sid}" value="${existing?.note||''}"
-        class="form-control" style="font-size:12px" placeholder="備註"></td>
+      <td style="text-align:center;color:#94a3b8;font-size:13px;padding:6px 4px">${s.seat}</td>
+      <td style="font-size:11px;color:#94a3b8;padding:6px 4px">${s.sid}</td>
+      <td style="font-weight:600;padding:6px 10px;white-space:nowrap">${s.name}</td>
+      ${cells}
     </tr>`;
   }).join('');
 }
 
-function updateRowGrade(sid) {
-  const raw = document.getElementById('sc_'+sid)?.value;
+function updateCellGrade(sid, subj) {
+  const key  = `${sid}_${subj.replace(/\s/g,'_')}`;
+  const inp  = document.getElementById('sc_' + key);
+  const cell = document.getElementById('gd_' + key);
+  if(!inp || !cell) return;
+  const raw = inp.value;
   const sc  = parseFloat(raw);
-  const cell = document.getElementById('gd_'+sid);
   if(raw !== '' && !isNaN(sc) && sc >= 0 && sc <= 100) {
     const sg = scoreGradeLabel(sc);
-    cell.innerHTML = `<span class="badge ${sg.bc}" style="font-size:14px">${sg.label}</span>`;
-    document.getElementById('sc_'+sid).style.borderColor = sc>=60?'#10b981':'#ef4444';
+    cell.innerHTML = `<span class="badge ${sg.bc}" style="font-size:11px">${sg.label}</span>`;
+    inp.style.borderColor = sc >= 60 ? '#10b981' : '#ef4444';
   } else {
     cell.innerHTML = '';
-    document.getElementById('sc_'+sid).style.borderColor = '#d1d5db';
+    inp.style.borderColor = '#d1d5db';
   }
 }
 
 function saveAllInputScores() {
-  const cls     = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
-  const subject = document.getElementById('inputSubject').value;
-  const date    = document.getElementById('inputDate').value;
-  const yr      = document.getElementById('gradeYear')?.value || currentGradeYear;
-  const sem     = document.getElementById('gradeSemester')?.value || currentGradeSemester;
-  const stage   = currentGradeStage;
-  const roster  = STUDENT_ROSTER.filter(s => s.cls === cls);
-  let saved=0, skipped=0;
+  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+  const date     = document.getElementById('inputDate').value;
+  const yr       = document.getElementById('gradeYear')?.value  || currentGradeYear;
+  const sem      = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const stage    = currentGradeStage;
+  const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
+  const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
+  let saved = 0, skipped = 0;
   roster.forEach(s => {
-    const raw = document.getElementById('sc_'+s.sid)?.value;
-    const sc  = parseFloat(raw);
-    if(raw===''||raw===null||raw===undefined) { skipped++; return; }
-    if(isNaN(sc)||sc<0||sc>100) return;
-    const note = document.getElementById('note_'+s.sid)?.value||'';
-    const existing = grades.find(g =>
-      g.sid===s.sid && g.subject===subject &&
-      g.year===yr && g.semester===sem && g.stage===stage
-    );
-    if(existing) { existing.score=sc; existing.date=date; existing.note=note; }
-    else { grades.push({id:gradeNextId++,sid:s.sid,cls,name:s.name,year:yr,semester:sem,stage,subject,score:sc,date,note}); }
-    saved++;
+    subjects.forEach(subject => {
+      const key = `${s.sid}_${subject.replace(/\s/g,'_')}`;
+      const raw = document.getElementById('sc_' + key)?.value;
+      const sc  = parseFloat(raw);
+      if(raw === '' || raw === null || raw === undefined) { skipped++; return; }
+      if(isNaN(sc) || sc < 0 || sc > 100) return;
+      const existing = grades.find(g =>
+        g.sid===s.sid && g.subject===subject &&
+        g.year===yr && g.semester===sem && g.stage===stage);
+      if(existing) { existing.score = sc; existing.date = date; }
+      else grades.push({id:gradeNextId++,sid:s.sid,cls,name:s.name,
+        year:yr,semester:sem,stage,subject,score:sc,date,note:''});
+      saved++;
+    });
   });
   const msg = document.createElement('div');
-  msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
-  msg.textContent = `✅ 已儲存 ${saved} 筆成績${skipped?'（'+skipped+'筆空白跳過）':''}`;
+  msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+  msg.textContent = `✅ 已儲存 ${saved} 筆成績${skipped ? `（${skipped} 筆空白跳過）` : ''}`;
   document.body.appendChild(msg);
-  setTimeout(()=>msg.remove(), 3000);
+  setTimeout(() => msg.remove(), 3000);
   renderGradeInput();
 }
 
@@ -2349,7 +2382,6 @@ function importFromExcel(input) {
       if(subjCols.length === 0) { alert('找不到科目欄位'); input.value=''; return; }
       const nameCI  = hdr.findIndex(h => h==='姓名');
       const sidCI   = hdr.findIndex(h => String(h)==='學號');
-      const subject = document.getElementById('inputSubject').value;
       const date    = document.getElementById('inputDate').value;
       const yr      = document.getElementById('gradeYear')?.value || currentGradeYear;
       const sem     = document.getElementById('gradeSemester')?.value || currentGradeSemester;
@@ -2363,19 +2395,20 @@ function importFromExcel(input) {
         let stu = STUDENT_ROSTER.find(s => s.sid === sidRaw);
         if(!stu) stu = STUDENT_ROSTER.find(s => s.name === name);
         if(!stu) { skipped++; continue; }
-        const subjectMatch = subjCols.find(sc => sc.name === subject);
-        const useCol = subjectMatch ? subjectMatch.ci : subjCols[0].ci;
-        const raw = row[useCol];
-        const sc = parseFloat(raw);
-        if(raw === '' || raw === null || isNaN(sc) || sc < 0 || sc > 100) { skipped++; continue; }
         const cls = stu.cls;
-        const existing = grades.find(g =>
-          g.sid===stu.sid && g.subject===subject &&
-          g.year===yr && g.semester===sem && g.stage===stage
-        );
-        if(existing) { existing.score=sc; existing.date=date; }
-        else { grades.push({id:gradeNextId++,sid:stu.sid,cls,name:stu.name,year:yr,semester:sem,stage,subject,score:sc,date,note:''}); }
-        imported++;
+        // Import ALL detected subject columns at once
+        subjCols.forEach(sc => {
+          const raw   = row[sc.ci];
+          const score = parseFloat(raw);
+          if(raw === '' || raw === null || isNaN(score) || score < 0 || score > 100) return;
+          const existing = grades.find(g =>
+            g.sid===stu.sid && g.subject===sc.name &&
+            g.year===yr && g.semester===sem && g.stage===stage);
+          if(existing) { existing.score = score; existing.date = date; }
+          else grades.push({id:gradeNextId++,sid:stu.sid,cls,name:stu.name,
+            year:yr,semester:sem,stage,subject:sc.name,score,date,note:''});
+          imported++;
+        });
       }
       const msg = document.createElement('div');
       msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#3b82f6;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
@@ -2391,16 +2424,7 @@ function importFromExcel(input) {
 
 function exportToExcel() {
   const cls = currentGradeClass === '全校' ? null : currentGradeClass;
-  const subject = document.getElementById('inputSubject').value;
   const roster = cls ? STUDENT_ROSTER.filter(s => s.cls === cls) : STUDENT_ROSTER;
-  const SUBJ_MAP = {
-    '1年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
-    '2年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
-    '3年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-    '4年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-    '5年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-    '6年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-  };
   const yr    = document.getElementById('gradeYear')?.value || currentGradeYear;
   const sem   = document.getElementById('gradeSemester')?.value || currentGradeSemester;
   const stage = currentGradeStage;
@@ -2418,7 +2442,8 @@ function exportToExcel() {
       gradeMap[g.sid][g.subject] = g.score;
     }
   });
-  const subjects = cls ? (SUBJ_MAP[cls] || [subject]) : [subject];
+  const allSubj  = ['國語','數學','社會','自然','英語','生活','體育','音樂','視覺藝術'];
+  const subjects = cls ? (INPUT_SUBJ_MAP[cls] || allSubj) : allSubj;
   const hdr = ['班級','座號','學號','姓名'];
   subjects.forEach(s => { hdr.push(s); hdr.push(s+'等第'); });
   hdr.push('總分');
