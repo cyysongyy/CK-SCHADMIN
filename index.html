@@ -1574,8 +1574,22 @@ const SUBJECTS_LOW  = ['國語','數學','生活','體育','藝術'];      // 1-
 const SUBJECTS_MID  = ['國語','數學','英語','自然','社會','體育','藝術']; // 3-4年級
 const SUBJECTS_HIGH = ['國語','數學','英語','自然','社會','體育','藝術']; // 5-6年級
 
-let grades = []; // {id, sid, cls, name, year, semester, stage, subject, score, note}
-let gradeNextId = 1;
+// ── 成績持久化（localStorage）──
+function _loadGrades() {
+  try {
+    const raw = localStorage.getItem('cksch_grades');
+    if(!raw) return { data: [], nextId: 1 };
+    const parsed = JSON.parse(raw);
+    return { data: parsed.data || [], nextId: parsed.nextId || 1 };
+  } catch(e) { return { data: [], nextId: 1 }; }
+}
+function saveGrades() {
+  try { localStorage.setItem('cksch_grades', JSON.stringify({ data: grades, nextId: gradeNextId })); }
+  catch(e) { console.warn('成績儲存失敗:', e); }
+}
+const _gInit = _loadGrades();
+let grades = _gInit.data; // {id, sid, cls, name, year, semester, stage, subject, score, note}
+let gradeNextId = _gInit.nextId;
 let currentGradeClass = '1年甲班';
 let currentGradeYear = '114';
 let currentGradeSemester = '2';
@@ -2253,6 +2267,7 @@ function saveAllInputScores() {
       saved++;
     });
   });
+  saveGrades();
   const msg = document.createElement('div');
   msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
   msg.textContent = `✅ 已儲存 ${saved} 筆成績${skipped ? `（${skipped} 筆空白跳過）` : ''}`;
@@ -2359,7 +2374,7 @@ function renderGradeFinal() {
     '<tr><td colspan="99" class="empty-state" style="padding:30px">尚無成績資料，請先在第一階段或第二階段輸入分數</td></tr>';
 }
 
-function deleteGradeEntry(id) { grades=grades.filter(g=>g.id!==id); renderGradeView(); }
+function deleteGradeEntry(id) { grades=grades.filter(g=>g.id!==id); saveGrades(); renderGradeView(); }
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -2427,6 +2442,7 @@ function importFromExcel(input) {
           imported++;
         });
       }
+      saveGrades();
       const msg = document.createElement('div');
       msg.style.cssText='position:fixed;bottom:24px;right:24px;background:#3b82f6;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
       msg.innerHTML = `📥 <strong>Excel 匯入完成</strong><br>已匯入 ${imported} 筆${skipped?'，跳過 '+skipped+' 筆':''}`;
