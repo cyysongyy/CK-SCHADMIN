@@ -509,12 +509,18 @@
           <option value="1">第1學期</option>
         </select>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px">
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-warning btn-sm" onclick="exportToExcel()" title="匯出目前班級成績">📤 匯出Excel</button>
         <label class="btn btn-primary btn-sm" style="cursor:pointer" title="從Excel匯入成績">
           📥 匯入Excel
           <input type="file" accept=".xlsx" style="display:none" onchange="importFromExcel(this)">
         </label>
+        <button class="btn btn-sm" onclick="driveGradeOp('save')"
+          style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:600"
+          title="將成績儲存至 Google Drive（跨裝置同步）">☁️ 儲存Drive</button>
+        <button class="btn btn-sm" onclick="driveGradeOp('load')"
+          style="background:#34a853;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:600"
+          title="從 Google Drive 讀取成績（同步到本機）">☁️ 讀取Drive</button>
       </div>
     </div>
 
@@ -3382,7 +3388,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 //  GOOGLE CALENDAR OAuth 同步
 // ═══════════════════════════════════════════════════════════════
 const GCAL_CLIENT_ID = '308729450984-dhrp780c6262cumep12o2e6q3491mvds.apps.googleusercontent.com';
-const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.readonly';
+const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata';
 const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 // 開啟行事曆頁面時自動嘗試同步（silent first, 失敗才顯示橫幅）
@@ -3452,8 +3458,8 @@ function syncGoogleCalendar() {
       await fetchGCalEvents(resp.access_token);
     }
   });
-  // prompt:'' 讓 Google 靜默授權；首次需要帳號選擇時才會彈出一次
-  tokenClient.requestAccessToken({ prompt: '' });
+  // 手機明確點擊同步時強制顯示帳號選擇，避免靜默授權失敗；桌機靜默授權
+  tokenClient.requestAccessToken({ prompt: _IS_MOBILE ? 'select_account' : '' });
 }
 
 async function fetchGCalEvents(accessToken) {
@@ -3480,14 +3486,8 @@ async function fetchGCalEvents(accessToken) {
     let allItems = [];
     const seenIds = new Set();
 
-    if (_IS_MOBILE) {
-      // 手機：只抓 primary，省記憶體
-      const url  = `https://www.googleapis.com/calendar/v3/calendars/primary/events`
-                 + `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=${maxRes}`;
-      const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
-      const data = await res.json();
-      if (data.error) { alert('取得行事曆失敗：' + data.error.message); return; }
-      allItems = data.items || [];
+    if (false) {
+      // (舊邏輯已移除，手機與電腦統一抓所有子行事曆)
     } else {
       // 電腦：抓所有子行事曆
       const calListRes  = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
@@ -3567,6 +3567,135 @@ async function fetchGCalEvents(accessToken) {
 window.onGoogleLibraryLoad = function() {
   setTimeout(autoSyncCalendar, 800);
 };
+
+// ═══════════════════════════════════════════════════════════════
+//  Google Drive 成績雲端同步（appDataFolder，跨裝置）
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg, ok) {
+  const d = document.createElement('div');
+  const bg = (ok === false) ? '#ef4444' : (ok === true ? '#10b981' : '#1d4ed8');
+  d.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:#fff;`
+    + `padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;`
+    + `box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:300px`;
+  d.textContent = msg;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+const _DRIVE_FILE_NAME = 'cksch_grades_v1.json';
+
+async function saveGradesToDrive(token) {
+  const content = JSON.stringify({ data: grades, nextId: gradeNextId });
+  // 搜尋 appDataFolder 內已有的檔案
+  const sq = encodeURIComponent(`name="${_DRIVE_FILE_NAME}"`);
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${sq}&fields=files(id)`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  const searchData = await searchRes.json();
+  if (searchData.error) throw new Error(searchData.error.message);
+  const existing = (searchData.files || [])[0];
+
+  if (existing) {
+    // 更新既有檔案內容
+    const r = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`,
+      { method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: content }
+    );
+    if (!r.ok) throw new Error('更新失敗 ' + r.status);
+  } else {
+    // 第一次：在 appDataFolder 建立新檔案
+    const boundary = 'cksch_boundary_314159';
+    const meta = JSON.stringify({ name: _DRIVE_FILE_NAME, parents: ['appDataFolder'] });
+    const body = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`
+      + meta
+      + `\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n`
+      + content
+      + `\r\n--${boundary}--`;
+    const r = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST',
+        headers: { Authorization: 'Bearer ' + token,
+                   'Content-Type': `multipart/related; boundary="${boundary}"` },
+        body }
+    );
+    if (!r.ok) throw new Error('建立失敗 ' + r.status);
+  }
+  return true;
+}
+
+async function loadGradesFromDrive(token) {
+  const sq = encodeURIComponent(`name="${_DRIVE_FILE_NAME}"`);
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${sq}&fields=files(id,modifiedTime)`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  const searchData = await searchRes.json();
+  if (searchData.error) throw new Error(searchData.error.message);
+  const file = (searchData.files || [])[0];
+  if (!file) return false;
+
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  if (!r.ok) throw new Error('讀取失敗 ' + r.status);
+  const parsed = await r.json();
+  if (!parsed || !parsed.data) return false;
+
+  grades = parsed.data;
+  gradeNextId = parsed.nextId || (grades.length > 0 ? Math.max(...grades.map(g=>g.id)) + 1 : 1);
+  saveGrades();      // 同步寫入 localStorage
+  renderGradePage();
+  return true;
+}
+
+function driveGradeOp(op) {
+  const btn = event?.currentTarget;
+  const origText = btn?.textContent;
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  const doOp = async (token) => {
+    try {
+      if (op === 'save') {
+        await saveGradesToDrive(token);
+        showToast('✅ 成績已儲存至 Google Drive', true);
+      } else {
+        const ok = await loadGradesFromDrive(token);
+        showToast(ok ? '✅ 從 Google Drive 讀取成功' : '⚠️ Drive 尚無成績資料，請先從電腦儲存一次', null);
+      }
+    } catch(e) {
+      showToast('❌ 操作失敗：' + e.message, false);
+    } finally {
+      if (btn) { btn.textContent = origText; btn.disabled = false; }
+    }
+  };
+
+  if (_isTokenValid()) { doOp(_gToken); return; }
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    showToast('Google 服務尚未載入，請稍後再試', false);
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    return;
+  }
+  const tc = google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope: GCAL_SCOPE,
+    callback: async (resp) => {
+      if (resp.error) {
+        showToast('授權失敗：' + resp.error, false);
+        if (btn) { btn.textContent = origText; btn.disabled = false; }
+        return;
+      }
+      _gToken = resp.access_token;
+      _gTokenExpiry = Date.now() + 3500 * 1000;
+      doOp(_gToken);
+    }
+  });
+  tc.requestAccessToken({ prompt: _IS_MOBILE ? 'select_account' : '' });
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  MEETING RECORDS — 辰光會議 Google Drive 連結
