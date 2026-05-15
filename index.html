@@ -1799,6 +1799,15 @@ function printPage() { window.print(); }
 // ═══════════════════════════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════════════════════════
+// 依距今天數回傳urgency色碼：今天=紅、明天=橙、後天=琥珀、其餘=''
+function _urgencyColor(dateStr, todayStr) {
+  const diff = Math.round((new Date(dateStr+'T00:00:00') - new Date(todayStr+'T00:00:00')) / 86400000);
+  if (diff === 0) return '#dc2626'; // 今天 → 紅
+  if (diff === 1) return '#ea580c'; // 明天 → 橙
+  if (diff === 2) return '#d97706'; // 後天 → 琥珀
+  return '';
+}
+
 function fmtDate(d) {
   if(!d) return '-';
   const [y,m,day] = d.split('-');
@@ -1856,10 +1865,16 @@ function renderDashboard() {
   document.getElementById('dashEvents').innerHTML = upcoming5.length ?
     upcoming5.map(e=>{
       const [ey,em,ed] = e.date.split('-');
-      return `<div class="event-item">
-        <div class="event-date-box"><div class="mon">${months[+em-1]}月</div><div class="day">${+ed}</div></div>
+      const uc = _urgencyColor(e.date, now);
+      const cs = uc ? `color:${uc};font-weight:700` : '';
+      const bl = uc ? `border-left:3px solid ${uc};padding-left:8px;margin-left:-8px` : '';
+      return `<div class="event-item" style="${bl}">
+        <div class="event-date-box" style="${uc?`background:${uc}18`:''}">
+          <div class="mon" style="${cs}">${months[+em-1]}月</div>
+          <div class="day" style="${cs}">${+ed}</div>
+        </div>
         <div class="event-info">
-          <div class="title">${e.name}</div>
+          <div class="title" style="${cs}">${e.name}</div>
           <div class="meta"><span class="badge type-${e.type}" style="font-size:10px">${e.type}</span>${e.desc?' '+e.desc:''}</div>
         </div></div>`;}).join('') :
     '<div class="empty-state"><div class="icon">📅</div>近期無活動安排</div>';
@@ -1964,13 +1979,17 @@ function renderEventTable() {
   }).sort((a,b)=>a.date.localeCompare(b.date));
 
   const _wd = ['日','一','二','三','四','五','六'];
+  const _todayStr = today.toISOString().slice(0,10);
   document.getElementById('eventTableBody').innerHTML = monthEvents.length ?
     monthEvents.map(e=>{
       const _dt = new Date(e.date + 'T00:00:00');
-      const _dateCell = `${fmtDate(e.date)}<br><span style="font-size:11px;color:#64748b">星期${_wd[_dt.getDay()]}</span>`;
-      return `<tr>
+      const uc  = _urgencyColor(e.date, _todayStr);
+      const cs  = uc ? `color:${uc};font-weight:700` : '';
+      const rowBg = uc ? `background:${uc}0d` : '';
+      const _dateCell = `<span style="${cs}">${fmtDate(e.date)}</span><br><span style="font-size:11px;color:${uc||'#64748b'}">星期${_wd[_dt.getDay()]}</span>`;
+      return `<tr style="${rowBg}">
       <td>${_dateCell}</td>
-      <td><strong>${e.name}</strong>${e.src==='gcal'?'<span title="來自辰光行事曆" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 辰光曆</span>':e.src==='gcal-personal'?'<span title="來自個人行事曆 cyysongyy@gmail.com" style="margin-left:5px;font-size:11px;background:#fce7f3;color:#9d174d;border-radius:10px;padding:1px 6px">👤 個人曆</span>':''}</td>
+      <td><strong style="${cs}">${e.name}</strong>${e.src==='gcal'?'<span title="來自辰光行事曆" style="margin-left:5px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:10px;padding:1px 6px">📅 辰光曆</span>':e.src==='gcal-personal'?'<span title="來自個人行事曆 cyysongyy@gmail.com" style="margin-left:5px;font-size:11px;background:#fce7f3;color:#9d174d;border-radius:10px;padding:1px 6px">👤 個人曆</span>':''}</td>
       <td><span class="badge type-${e.type}">${e.type}</span></td>
       <td style="color:#64748b">${e.desc||'-'}</td>
       <td>
