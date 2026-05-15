@@ -553,12 +553,7 @@
             <button class="btn btn-success btn-sm" onclick="saveAllInputScores()">💾 儲存全班</button>
           </div>
         </div>
-        <div style="overflow-x:auto">
-          <table id="inputTable">
-            <thead id="inputTableHead"></thead>
-            <tbody id="inputTableBody"></tbody>
-          </table>
-        </div>
+        <div id="inputTableContainer"></div>
         <div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b">
           💡 直接在分數欄輸入數字，按 Tab 跳至下一格，Enter 快速儲存全班
         </div>
@@ -2171,55 +2166,48 @@ const INPUT_SUBJ_MAP = {
   '6年甲班':['國語','數學','社會','自然','英語'],
 };
 
-function renderGradeInput() {
-  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
-  const stage    = currentGradeStage;
-  const stageLabel = stage === '1' ? '第一階段' : '第二階段';
-  const yr  = document.getElementById('gradeYear')?.value  || currentGradeYear;
-  const sem = document.getElementById('gradeSemester')?.value || currentGradeSemester;
-  document.getElementById('inputPanelTitle').textContent =
-    `${yr}學年度 第${sem}學期 ${cls} ── ${stageLabel} 批次輸入`;
-
+function _buildClassBlock(cls, yr, sem, stage, showBanner) {
   const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
   const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
 
-  // ── 動態表頭 ──
-  const thead = document.getElementById('inputTableHead');
-  if(thead) {
-    thead.innerHTML =
-      `<tr style="background:#1e3a5f;color:#fff;font-size:13px">
-        <th style="width:44px;text-align:center;padding:8px 4px;white-space:nowrap">座號</th>
-        <th style="padding:8px 4px;font-size:11px;white-space:nowrap">學號</th>
-        <th style="padding:8px 10px;white-space:nowrap">姓名</th>
-        ${subjects.map(s=>`<th colspan="2" style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">${s}</th>`).join('')}
-        <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">平均</th>
-        <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">名次</th>
-      </tr>
-      <tr style="background:#2e5090;color:#fff;font-size:11px">
-        <th></th><th></th><th></th>
-        ${subjects.map(()=>`
-          <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd;white-space:nowrap">成績</th>
-          <th style="padding:4px 6px;text-align:center;white-space:nowrap">等第</th>`).join('')}
-        <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd"></th>
-        <th style="padding:4px 6px;text-align:center"></th>
-      </tr>`;
-  }
+  const banner = showBanner
+    ? `<div style="background:#1e3a5f;color:#fff;padding:10px 16px;font-size:15px;font-weight:700;
+                   border-radius:8px 8px 0 0;margin-top:18px;display:flex;align-items:center;gap:8px">
+         📚 ${cls}<span style="font-size:12px;font-weight:400;opacity:.8">（${roster.length} 人）</span>
+       </div>`
+    : '';
 
-  // ── 資料列 ──
-  document.getElementById('inputTableBody').innerHTML = roster.map(s => {
+  const theadHtml =
+    `<tr style="background:#1e3a5f;color:#fff;font-size:13px">
+       <th style="width:44px;text-align:center;padding:8px 4px;white-space:nowrap">座號</th>
+       <th style="padding:8px 4px;font-size:11px;white-space:nowrap">學號</th>
+       <th style="padding:8px 10px;white-space:nowrap">姓名</th>
+       ${subjects.map(s=>`<th colspan="2" style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">${s}</th>`).join('')}
+       <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">平均</th>
+       <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">名次</th>
+     </tr>
+     <tr style="background:#2e5090;color:#fff;font-size:11px">
+       <th></th><th></th><th></th>
+       ${subjects.map(()=>`
+         <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd;white-space:nowrap">成績</th>
+         <th style="padding:4px 6px;text-align:center;white-space:nowrap">等第</th>`).join('')}
+       <th style="padding:4px 6px;border-left:2px solid #3a6bbd"></th><th></th>
+     </tr>`;
+
+  const tbodyHtml = roster.map(s => {
     const cells = subjects.map(subj => {
       const existing = grades.find(g =>
         g.sid===s.sid && g.subject===subj &&
         g.year===yr && g.semester===sem && g.stage===stage);
-      const sc  = existing !== undefined ? existing.score : '';
-      const sg  = sc !== '' ? scoreGradeLabel(sc) : null;
-      const bc  = sc !== '' ? (sc < 60 ? '#ef4444' : '#10b981') : '#d1d5db';
+      const sc = existing !== undefined ? existing.score : '';
+      const sg = sc !== '' ? scoreGradeLabel(sc) : null;
+      const bc = sc !== '' ? (sc < 60 ? '#ef4444' : '#10b981') : '#d1d5db';
       return `<td style="border-left:2px solid #e2e8f0;padding:3px 4px;text-align:center">
           <input type="number" id="sc_${s.sid}_${subj.replace(/\s/g,'_')}" value="${sc}"
             min="0" max="100"
             style="width:62px;text-align:center;font-size:15px;font-weight:700;padding:3px 2px;
                    border:2px solid ${bc};border-radius:6px;background:#fff;display:block;margin:auto"
-            oninput="updateCellGrade('${s.sid}','${subj}')"
+            oninput="updateCellGrade('${s.sid}','${subj}','${cls}')"
             onkeydown="if(event.key==='Enter'){saveAllInputScores()}">
         </td>
         <td id="gd_${s.sid}_${subj.replace(/\s/g,'_')}" style="text-align:center;padding:2px 4px;white-space:nowrap">
@@ -2235,10 +2223,33 @@ function renderGradeInput() {
       <td id="rank_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#7c3aed;white-space:nowrap"></td>
     </tr>`;
   }).join('');
-  setTimeout(calcAvgRank, 0);
+
+  const borderTop = showBanner ? '' : 'border-radius:8px 8px 0 0;';
+  return `${banner}<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>
+  </table></div>`;
 }
 
-function updateCellGrade(sid, subj) {
+function renderGradeInput() {
+  const isAll  = currentGradeClass === '全校';
+  const clsList = isAll
+    ? ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班']
+    : [currentGradeClass];
+  const stage      = currentGradeStage;
+  const stageLabel = stage === '1' ? '第一階段' : '第二階段';
+  const yr  = document.getElementById('gradeYear')?.value  || currentGradeYear;
+  const sem = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+
+  document.getElementById('inputPanelTitle').textContent =
+    `${yr}學年度 第${sem}學期 ${isAll ? '全校' : clsList[0]} ── ${stageLabel} 批次輸入`;
+
+  document.getElementById('inputTableContainer').innerHTML =
+    clsList.map(cls => _buildClassBlock(cls, yr, sem, stage, isAll)).join('');
+
+  setTimeout(() => clsList.forEach(calcAvgRankForClass), 0);
+}
+
+function updateCellGrade(sid, subj, cls) {
   const key  = `${sid}_${subj.replace(/\s/g,'_')}`;
   const inp  = document.getElementById('sc_' + key);
   const cell = document.getElementById('gd_' + key);
@@ -2253,15 +2264,14 @@ function updateCellGrade(sid, subj) {
     cell.innerHTML = '';
     inp.style.borderColor = '#d1d5db';
   }
-  calcAvgRank();
+  calcAvgRankForClass(cls || (currentGradeClass === '全校' ? null : currentGradeClass));
 }
 
-function calcAvgRank() {
-  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+function calcAvgRankForClass(cls) {
+  if (!cls) return;
   const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
   const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
 
-  // Compute average for each student from current input values
   const avgList = roster.map(s => {
     const scores = subjects.map(subj => {
       const inp = document.getElementById(`sc_${s.sid}_${subj.replace(/\s/g,'_')}`);
@@ -2272,16 +2282,13 @@ function calcAvgRank() {
     return { sid: s.sid, avg };
   });
 
-  // Build rank map (tied scores share the same rank)
-  const withScore = avgList.filter(a => a.avg !== null)
-                           .sort((a,b) => b.avg - a.avg);
+  const withScore = avgList.filter(a => a.avg !== null).sort((a,b) => b.avg - a.avg);
   const rankMap = {};
   withScore.forEach((item, i) => {
     rankMap[item.sid] = (i > 0 && withScore[i-1].avg === item.avg)
       ? rankMap[withScore[i-1].sid] : i + 1;
   });
 
-  // Push to DOM
   avgList.forEach(({ sid, avg }) => {
     const avgCell  = document.getElementById('avg_'  + sid);
     const rankCell = document.getElementById('rank_' + sid);
@@ -2290,15 +2297,27 @@ function calcAvgRank() {
   });
 }
 
+function calcAvgRank() {
+  const isAll = currentGradeClass === '全校';
+  const clsList = isAll
+    ? ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班']
+    : [currentGradeClass];
+  clsList.forEach(calcAvgRankForClass);
+}
+
 function saveAllInputScores() {
-  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
-  const date     = document.getElementById('inputDate').value;
-  const yr       = document.getElementById('gradeYear')?.value  || currentGradeYear;
-  const sem      = document.getElementById('gradeSemester')?.value || currentGradeSemester;
-  const stage    = currentGradeStage;
+  const isAll   = currentGradeClass === '全校';
+  const clsList = isAll
+    ? ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班']
+    : [currentGradeClass];
+  const date  = document.getElementById('inputDate').value;
+  const yr    = document.getElementById('gradeYear')?.value  || currentGradeYear;
+  const sem   = document.getElementById('gradeSemester')?.value || currentGradeSemester;
+  const stage = currentGradeStage;
+  let saved = 0, skipped = 0;
+  clsList.forEach(cls => {
   const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
   const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
-  let saved = 0, skipped = 0;
   roster.forEach(s => {
     subjects.forEach(subject => {
       const key = `${s.sid}_${subject.replace(/\s/g,'_')}`;
@@ -2315,6 +2334,7 @@ function saveAllInputScores() {
       saved++;
     });
   });
+  }); // end clsList.forEach
   saveGrades();
   const msg = document.createElement('div');
   msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
