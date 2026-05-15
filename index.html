@@ -855,6 +855,18 @@
       </div>
     </div>
 
+    <!-- 圍圈輪值表 -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-header">
+        <span class="panel-title">🔄 週四品格圍圈輪值</span>
+        <span style="font-size:12px;color:#94a3b8">下午 3:00–3:20　A組：樂活運動場　B組：圖書室</span>
+      </div>
+      <div class="panel-body" style="padding:16px 20px">
+        <div id="selRotationGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px"></div>
+        <div id="selRotationNav" style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px"></div>
+      </div>
+    </div>
+
     <!-- 統計卡 -->
     <div class="cards-row" id="selStats" style="grid-template-columns:repeat(4,1fr)"></div>
 
@@ -2610,7 +2622,98 @@ const SEL_DOMAIN_COLORS = {
 };
 const SEL_STATUS_BADGE = {已完成:'badge-green',進行中:'badge-blue',已報名:'badge-yellow',規劃中:'badge-gray'};
 
+// ── 圍圈輪值表資料（114下學期，週四 3:00~3:20）
+const SEL_ROTATION = [
+  { week:2,  date:'2026/3/5',  theme:'堅毅', A:'黃于玲', B:'林瑞芳' },
+  { week:3,  date:'2026/3/12', theme:'感恩', A:'張曉鈴', B:'王瑞明' },
+  { week:4,  date:'2026/3/19', theme:'感恩', A:'王怡文', B:'楊凱棋' },
+  { week:5,  date:'2026/3/26', theme:'熱情', A:'陳永芝', B:'吳惠雅' },
+  { week:6,  date:'2026/4/2',  theme:'熱情', A:'黃雅玲', B:'陳英曉' },
+  { week:7,  date:'2026/4/9',  theme:'自制', A:'蔡幸華', B:'張曉鈴' },
+  { week:8,  date:'2026/4/16', theme:'自制', A:'黃于玲', B:'王瑞明' },
+  { week:10, date:'2026/4/30', theme:'堅毅', A:'林瑞芳', B:'楊凱棋' },
+  { week:11, date:'2026/5/7',  theme:'堅毅', A:'王怡文', B:'吳惠雅' },
+  { week:12, date:'2026/5/14', theme:'感恩', A:'陳英曉', B:'陳永芝' },
+  { week:13, date:'2026/5/21', theme:'感恩', A:'蔡幸華', B:'黃雅玲' },
+  { week:14, date:'2026/5/28', theme:'熱情', A:'黃于玲', B:'林瑞芳' },
+  { week:15, date:'2026/6/4',  theme:'熱情', A:'張曉鈴', B:'王瑞明' },
+  { week:16, date:'2026/6/11', theme:'自制', A:'王怡文', B:'楊凱棋' },
+];
+
+const SEL_THEME_COLOR = {
+  感恩: { bg:'#d1fae5', text:'#065f46', border:'#6ee7b7' },
+  熱情: { bg:'#ffedd5', text:'#9a3412', border:'#fdba74' },
+  自制: { bg:'#dbeafe', text:'#1e40af', border:'#93c5fd' },
+  堅毅: { bg:'#ede9fe', text:'#5b21b6', border:'#c4b5fd' },
+};
+
+let _selRotPage = 0; // 翻頁狀態：0 = 本週起第一組，1 = 下一組
+
+function renderSelRotation() {
+  const el = document.getElementById('selRotationGrid');
+  const navEl = document.getElementById('selRotationNav');
+  if (!el) return;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // 找到「本週或最近下一週」的起始索引（以今天為基準，固定起點）
+  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
+  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
+  baseIdx = Math.max(0, baseIdx);
+
+  // 每次顯示 3 週，最多往後涵蓋 5 週（0~4）
+  const windowSize = 5;
+  const pageSize = 3;
+  const maxPage = Math.ceil(windowSize / pageSize) - 1; // 頁碼 0 或 1
+  _selRotPage = Math.max(0, Math.min(_selRotPage, maxPage));
+
+  const sliceStart = baseIdx + _selRotPage * pageSize;
+  const sliceEnd = Math.min(sliceStart + pageSize, baseIdx + windowSize, SEL_ROTATION.length);
+  const rows = SEL_ROTATION.slice(sliceStart, sliceEnd);
+
+  // 計算本組標籤（第幾週相對於 baseIdx）
+  const offsetBase = _selRotPage * pageSize; // 0, 3, 6…
+  const weekLabels = ['本週', '下週', '再下週', '第4週', '第5週'];
+
+  el.innerHTML = rows.map((r, i) => {
+    const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
+    const globalOffset = offsetBase + i;
+    const isNow = globalOffset === 0;
+    const label = weekLabels[globalOffset] || `第${globalOffset+1}週`;
+    return `
+    <div style="border:2px solid ${c.border};border-radius:12px;padding:16px;background:${c.bg};position:relative">
+      ${isNow ? `<span style="position:absolute;top:10px;right:10px;background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">本週</span>` : ''}
+      <div style="font-size:11px;font-weight:700;color:${c.text};opacity:0.7;margin-bottom:4px">${label}・第${r.week}週</div>
+      <div style="font-size:22px;font-weight:800;color:${c.text};margin-bottom:2px">${r.theme}</div>
+      <div style="font-size:12px;color:${c.text};opacity:0.75;margin-bottom:12px">📅 ${r.date.slice(5)} (週四)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">A組・1.3.5年級</div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b">👤 ${r.A}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">B組・2.4.6年級</div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b">👤 ${r.B}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 更新翻頁按鈕
+  if (navEl) {
+    const hasPrev = _selRotPage > 0;
+    const hasNext = _selRotPage < maxPage && sliceEnd < baseIdx + windowSize && sliceEnd < SEL_ROTATION.length;
+    navEl.innerHTML = `
+      <button onclick="_selRotPage--;renderSelRotation()" style="padding:4px 14px;border-radius:8px;border:1px solid #cbd5e1;background:${hasPrev?'#fff':'#f1f5f9'};color:${hasPrev?'#1e293b':'#94a3b8'};cursor:${hasPrev?'pointer':'default'};font-size:13px" ${hasPrev?'':'disabled'}>← 上一組</button>
+      <span style="font-size:12px;color:#94a3b8">第 ${_selRotPage+1} / ${maxPage+1} 組</span>
+      <button onclick="_selRotPage++;renderSelRotation()" style="padding:4px 14px;border-radius:8px;border:1px solid #cbd5e1;background:${hasNext?'#fff':'#f1f5f9'};color:${hasNext?'#1e293b':'#94a3b8'};cursor:${hasNext?'pointer':'default'};font-size:13px" ${hasNext?'':'disabled'}>下一組 →</button>
+    `;
+  }
+}
+
 function renderSelPage() {
+  _selRotPage = 0;
+  renderSelRotation();
   // Stats
   const total = selCourses.length;
   const done = selCourses.filter(s=>s.status==='已完成').length;
@@ -3186,9 +3289,21 @@ const _IS_MOBILE     = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAge
 function autoSyncCalendar() {
   const banner = document.getElementById('gcalSyncBanner');
 
+  // ── 若 token 仍有效，直接重用，不再跳帳號選擇 ──
+  if (_isTokenValid()) {
+    if (banner) banner.style.display = 'none';
+    fetchGCalEvents(_gToken);
+    return;
+  }
+
+  // ── 手機版：不自動彈出 OAuth（避免每次切頁都跳帳號選擇畫面）
+  //    只顯示橫幅讓使用者手動點一次 ──
+  if (_IS_MOBILE) {
+    if (banner) banner.style.display = 'flex';
+    return;
+  }
 
   if (typeof google === 'undefined' || !google.accounts) {
-    // GIS 尚未載入，顯示橫幅讓使用者手動點
     if (banner) banner.style.display = 'flex';
     return;
   }
@@ -3197,23 +3312,27 @@ function autoSyncCalendar() {
     scope:     GCAL_SCOPE,
     callback:  async (resp) => {
       if (resp.error) {
-        // 需要使用者互動（例如首次授權），顯示橫幅
         if (banner) banner.style.display = 'flex';
         return;
       }
-      // 取得 token 成功，直接靜默同步
       if (banner) banner.style.display = 'none';
       await fetchGCalEvents(resp.access_token);
     }
   });
-  // prompt:'' 讓 Google 決定是否需要顯示授權畫面
-  // 若已授權過，通常可靜默取得 token
   tokenClient.requestAccessToken({ prompt: '' });
 }
 
 function syncGoogleCalendar() {
   const btn = document.getElementById('gcalSyncBtn');
   if (btn) { btn.textContent = '⏳ 授權中...'; btn.disabled = true; }
+
+  // ── 若 token 仍有效，直接重用，無需再跳帳號選擇 ──
+  if (_isTokenValid()) {
+    if (btn) btn.style.display = 'none';
+    document.getElementById('gcalSyncBanner').style.display = 'none';
+    fetchGCalEvents(_gToken);
+    return;
+  }
 
   if (typeof google === 'undefined' || !google.accounts) {
     alert('Google 登入服務尚未載入，請稍後再試或重新整理頁面。');
@@ -3233,11 +3352,13 @@ function syncGoogleCalendar() {
       await fetchGCalEvents(resp.access_token);
     }
   });
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  // prompt:'' 讓 Google 靜默授權；首次需要帳號選擇時才會彈出一次
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 async function fetchGCalEvents(accessToken) {
   _gToken = accessToken; // 存全域，供會議記錄 Drive API 使用
+  _gTokenExpiry = Date.now() + 3500 * 1000; // Google token 效期約 3600s
   setTimeout(autoLoadRecentMeetings, 200); // 若會議頁面已開啟則自動更新摘要
   const btn     = document.getElementById('gcalSyncBtn');
   const syncEl  = document.getElementById('conflictSyncLabel');
@@ -3350,7 +3471,11 @@ window.onGoogleLibraryLoad = function() {
 // ═══════════════════════════════════════════════════════════════
 //  MEETING RECORDS — 辰光會議 Google Drive 連結
 // ═══════════════════════════════════════════════════════════════
-let _gToken = null; // 全域 Google OAuth token（Calendar sync 後設定）
+let _gToken = null;       // 全域 Google OAuth token（Calendar sync 後設定）
+let _gTokenExpiry = 0;   // token 到期時間 (ms)，0 = 尚未取得
+function _isTokenValid() {
+  return !!_gToken && Date.now() < _gTokenExpiry - 60000; // 保留 60s 緩衝
+}
 
 // ── 懶載入 mammoth.js（只在會議頁面使用時才下載） ──────────────
 async function loadMammoth() {
