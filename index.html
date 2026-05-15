@@ -2157,12 +2157,12 @@ function renderGradeView() {
 
 // ── 批次輸入（第一 / 第二階段）── 多科目同時輸入
 const INPUT_SUBJ_MAP = {
-  '1年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
-  '2年甲班':['國語','數學','生活','體育','音樂','視覺藝術'],
-  '3年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-  '4年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-  '5年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
-  '6年甲班':['國語','數學','社會','自然','英語','體育','音樂','視覺藝術'],
+  '1年甲班':['國語','數學','生活'],
+  '2年甲班':['國語','數學','生活'],
+  '3年甲班':['國語','數學','社會','自然','英語'],
+  '4年甲班':['國語','數學','社會','自然','英語'],
+  '5年甲班':['國語','數學','社會','自然','英語'],
+  '6年甲班':['國語','數學','社會','自然','英語'],
 };
 
 function renderGradeInput() {
@@ -2186,12 +2186,16 @@ function renderGradeInput() {
         <th style="padding:8px 4px;font-size:11px;white-space:nowrap">學號</th>
         <th style="padding:8px 10px;white-space:nowrap">姓名</th>
         ${subjects.map(s=>`<th colspan="2" style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">${s}</th>`).join('')}
+        <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">平均</th>
+        <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">名次</th>
       </tr>
       <tr style="background:#2e5090;color:#fff;font-size:11px">
         <th></th><th></th><th></th>
         ${subjects.map(()=>`
           <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd;white-space:nowrap">成績</th>
           <th style="padding:4px 6px;text-align:center;white-space:nowrap">等第</th>`).join('')}
+        <th style="padding:4px 6px;text-align:center;border-left:2px solid #3a6bbd"></th>
+        <th style="padding:4px 6px;text-align:center"></th>
       </tr>`;
   }
 
@@ -2221,8 +2225,11 @@ function renderGradeInput() {
       <td style="font-size:11px;color:#94a3b8;padding:6px 4px">${s.sid}</td>
       <td style="font-weight:600;padding:6px 10px;white-space:nowrap">${s.name}</td>
       ${cells}
+      <td id="avg_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#1d4ed8;border-left:2px solid #e2e8f0;white-space:nowrap"></td>
+      <td id="rank_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#7c3aed;white-space:nowrap"></td>
     </tr>`;
   }).join('');
+  setTimeout(calcAvgRank, 0);
 }
 
 function updateCellGrade(sid, subj) {
@@ -2240,6 +2247,41 @@ function updateCellGrade(sid, subj) {
     cell.innerHTML = '';
     inp.style.borderColor = '#d1d5db';
   }
+  calcAvgRank();
+}
+
+function calcAvgRank() {
+  const cls      = currentGradeClass === '全校' ? '1年甲班' : currentGradeClass;
+  const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
+  const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
+
+  // Compute average for each student from current input values
+  const avgList = roster.map(s => {
+    const scores = subjects.map(subj => {
+      const inp = document.getElementById(`sc_${s.sid}_${subj.replace(/\s/g,'_')}`);
+      const v = parseFloat(inp?.value);
+      return isNaN(v) ? null : v;
+    }).filter(v => v !== null);
+    const avg = scores.length > 0 ? scores.reduce((a,b)=>a+b,0) / scores.length : null;
+    return { sid: s.sid, avg };
+  });
+
+  // Build rank map (tied scores share the same rank)
+  const withScore = avgList.filter(a => a.avg !== null)
+                           .sort((a,b) => b.avg - a.avg);
+  const rankMap = {};
+  withScore.forEach((item, i) => {
+    rankMap[item.sid] = (i > 0 && withScore[i-1].avg === item.avg)
+      ? rankMap[withScore[i-1].sid] : i + 1;
+  });
+
+  // Push to DOM
+  avgList.forEach(({ sid, avg }) => {
+    const avgCell  = document.getElementById('avg_'  + sid);
+    const rankCell = document.getElementById('rank_' + sid);
+    if(avgCell)  avgCell.textContent  = avg !== null ? avg.toFixed(1) : '';
+    if(rankCell) rankCell.textContent = avg !== null ? (rankMap[sid] || '') : '';
+  });
 }
 
 function saveAllInputScores() {
