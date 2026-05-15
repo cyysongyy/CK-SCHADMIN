@@ -2376,11 +2376,24 @@ function importFromExcel(input) {
       let hdrIdx = rows.findIndex(r => r.includes('姓名'));
       if(hdrIdx < 0) { alert('找不到標題列（含「姓名」欄）'); input.value=''; return; }
       const hdr = rows[hdrIdx];
-      const skip = new Set(['班級','座號','學號','姓名','總分','']);
+      const skip = new Set(['班級','座號','學號','姓名','總分','名次','平均','備註','']);
+      // 科目別名對應（Excel 欄位名 → 系統科目名）
+      const SUBJ_ALIAS = {
+        '國語文':'國語','語文':'國語','國文':'國語',
+        '生活課程':'生活','生活與倫理':'生活',
+        '自然與生活科技':'自然','自然科學':'自然','自然科':'自然',
+        '社會科':'社會','公民':'社會',
+        '英語文':'英語','英文':'英語',
+        '健康與體育':'體育','健體':'體育',
+        '藝術與人文':'視覺藝術','藝術':'視覺藝術',
+        '視藝':'視覺藝術','美勞':'視覺藝術',
+      };
       const subjCols = [];
       hdr.forEach((h, ci) => {
-        if(!skip.has(String(h).trim()) && !String(h).includes('等第')) {
-          subjCols.push({name: String(h).trim(), ci});
+        const raw = String(h).trim();
+        if(!skip.has(raw) && !raw.includes('等第') && raw !== '') {
+          const canonical = SUBJ_ALIAS[raw] || raw;
+          subjCols.push({name: canonical, ci});
         }
       });
       if(subjCols.length === 0) { alert('找不到科目欄位'); input.value=''; return; }
