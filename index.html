@@ -3493,22 +3493,15 @@ async function fetchGCalEvents(accessToken) {
   try {
     const now = new Date();
 
-    // ── 手機版：只抓 primary，前後6個月，避免記憶體過載當掉 ──
-    // ── 電腦版：抓所有子行事曆，整年範圍，完整資料 ──
-    const timeMin = _IS_MOBILE
-      ? new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString()
-      : new Date(now.getFullYear(), 0, 1).toISOString();
-    const timeMax = _IS_MOBILE
-      ? new Date(now.getFullYear(), now.getMonth() + 6, 0, 23, 59, 59).toISOString()
-      : new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
-    const maxRes = _IS_MOBILE ? 300 : 2500;
+    // ── 手機 / 電腦統一：抓所有子行事曆，整學年範圍 ──
+    const timeMin = new Date(now.getFullYear(), 0, 1).toISOString();
+    const timeMax = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59).toISOString();
+    const maxRes  = 2500;
 
     let allItems = [];
     const seenIds = new Set();
 
-    if (false) {
-      // (舊邏輯已移除，手機與電腦統一抓所有子行事曆)
-    } else {
+    {
       // 電腦：抓所有子行事曆
       const calListRes  = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
                             { headers: { Authorization: 'Bearer ' + accessToken } });
