@@ -1799,12 +1799,10 @@ function printPage() { window.print(); }
 // ═══════════════════════════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════════════════════════
-// 依距今天數回傳urgency色碼：今天=紅、明天=橙、後天=琥珀、其餘=''
+// 依距今天數回傳urgency色碼：今天、明天=紅，其餘=''
 function _urgencyColor(dateStr, todayStr) {
   const diff = Math.round((new Date(dateStr+'T00:00:00') - new Date(todayStr+'T00:00:00')) / 86400000);
-  if (diff === 0) return '#dc2626'; // 今天 → 紅
-  if (diff === 1) return '#ea580c'; // 明天 → 橙
-  if (diff === 2) return '#d97706'; // 後天 → 琥珀
+  if (diff === 0 || diff === 1) return '#dc2626'; // 今天 & 明天 → 紅
   return '';
 }
 
