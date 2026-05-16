@@ -1873,16 +1873,20 @@ function renderDashboard() {
   const upcoming5 = events.filter(e=>e.date>=now).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
   const _dashNextDate = events.filter(e=>e.date>now).sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;
   const months = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  const weekDays = ['日','一','二','三','四','五','六'];
   document.getElementById('dashEvents').innerHTML = upcoming5.length ?
     upcoming5.map(e=>{
       const [ey,em,ed] = e.date.split('-');
       const uc = _urgencyColor(e.date, now, _dashNextDate);
       const cs = uc ? `color:${uc};font-weight:700` : '';
       const bl = uc ? `border-left:3px solid ${uc};padding-left:8px;margin-left:-8px` : '';
+      const wd = new Date(e.date+'T00:00:00').getDay();
+      const wdStr = '週' + weekDays[wd];
       return `<div class="event-item" style="${bl}">
         <div class="event-date-box" style="${uc?`background:${uc}18`:''}">
           <div class="mon" style="${cs}">${months[+em-1]}月</div>
           <div class="day" style="${cs}">${+ed}</div>
+          <div class="wday" style="font-size:11px;${cs||'color:#6b7280'}">${wdStr}</div>
         </div>
         <div class="event-info">
           <div class="title" style="${cs}">${e.name}</div>
