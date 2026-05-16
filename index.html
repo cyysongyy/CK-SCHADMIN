@@ -2218,7 +2218,7 @@ function _buildClassBlock(cls, yr, sem, stage, showBanner) {
        <th style="padding:8px 4px;font-size:11px;white-space:nowrap">學號</th>
        <th style="padding:8px 10px;white-space:nowrap">姓名</th>
        ${subjects.map(s=>`<th colspan="2" style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">${s}</th>`).join('')}
-       <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">平均</th>
+       <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">總分</th>
        <th style="text-align:center;padding:8px 6px;border-left:2px solid #2e5090;white-space:nowrap">名次</th>
      </tr>
      <tr style="background:#2e5090;color:#fff;font-size:11px">
@@ -2254,7 +2254,7 @@ function _buildClassBlock(cls, yr, sem, stage, showBanner) {
       <td style="font-size:11px;color:#94a3b8;padding:6px 4px">${s.sid}</td>
       <td style="font-weight:600;padding:6px 10px;white-space:nowrap">${s.name}</td>
       ${cells}
-      <td id="avg_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#1d4ed8;border-left:2px solid #e2e8f0;white-space:nowrap"></td>
+      <td id="total_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#1d4ed8;border-left:2px solid #e2e8f0;white-space:nowrap"></td>
       <td id="rank_${s.sid}" style="text-align:center;padding:6px 6px;font-weight:700;color:#7c3aed;white-space:nowrap"></td>
     </tr>`;
   }).join('');
@@ -2307,28 +2307,28 @@ function calcAvgRankForClass(cls) {
   const subjects = INPUT_SUBJ_MAP[cls] || ['國語','數學'];
   const roster   = STUDENT_ROSTER.filter(s => s.cls === cls);
 
-  const avgList = roster.map(s => {
+  const totalList = roster.map(s => {
     const scores = subjects.map(subj => {
       const inp = document.getElementById(`sc_${s.sid}_${subj.replace(/\s/g,'_')}`);
       const v = parseFloat(inp?.value);
       return isNaN(v) ? null : v;
     }).filter(v => v !== null);
-    const avg = scores.length > 0 ? scores.reduce((a,b)=>a+b,0) / scores.length : null;
-    return { sid: s.sid, avg };
+    const total = scores.length > 0 ? scores.reduce((a,b)=>a+b,0) : null;
+    return { sid: s.sid, total };
   });
 
-  const withScore = avgList.filter(a => a.avg !== null).sort((a,b) => b.avg - a.avg);
+  const withScore = totalList.filter(a => a.total !== null).sort((a,b) => b.total - a.total);
   const rankMap = {};
   withScore.forEach((item, i) => {
-    rankMap[item.sid] = (i > 0 && withScore[i-1].avg === item.avg)
+    rankMap[item.sid] = (i > 0 && withScore[i-1].total === item.total)
       ? rankMap[withScore[i-1].sid] : i + 1;
   });
 
-  avgList.forEach(({ sid, avg }) => {
-    const avgCell  = document.getElementById('avg_'  + sid);
-    const rankCell = document.getElementById('rank_' + sid);
-    if(avgCell)  avgCell.textContent  = avg !== null ? avg.toFixed(1) : '';
-    if(rankCell) rankCell.textContent = avg !== null ? (rankMap[sid] || '') : '';
+  totalList.forEach(({ sid, total }) => {
+    const totalCell = document.getElementById('total_' + sid);
+    const rankCell  = document.getElementById('rank_'  + sid);
+    if(totalCell) totalCell.textContent = total !== null ? total : '';
+    if(rankCell)  rankCell.textContent  = total !== null ? (rankMap[sid] || '') : '';
   });
 }
 
