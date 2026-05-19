@@ -416,9 +416,20 @@
       </div>
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">🎓 教師進修統計</span>
+          <span class="panel-title">🎓 教師進修近期活動</span>
         </div>
         <div class="panel-body" id="dashTraining"></div>
+      </div>
+    </div>
+
+    <!-- 週四品格圍圈輪值（首頁） -->
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-header">
+        <span class="panel-title">🔄 週四品格圍圈輪值</span>
+        <span style="font-size:12px;color:#94a3b8">下午 3:00–3:20　A組：樂活運動場　B組：圖書室</span>
+      </div>
+      <div class="panel-body" style="padding:16px 20px">
+        <div id="dashRotationGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px"></div>
       </div>
     </div>
   </section>
@@ -1928,19 +1939,35 @@ function renderDashboard() {
       <div class="bar-label">${d.label}</div>
     </div>`).join('');
 
-  // Training summary
-  const typeCount = {};
-  trainings.forEach(t=>{ typeCount[t.type]=(typeCount[t.type]||0)+t.hours; });
-  const tColors = {'教學研究':'#3b82f6','行政研習':'#10b981','輔導知能':'#f59e0b','資訊應用':'#8b5cf6','特教知能':'#ef4444','其他':'#94a3b8'};
-  document.getElementById('dashTraining').innerHTML = `
-    <ul class="summary-list">
-      ${Object.entries(typeCount).map(([k,v])=>`
-        <li><div class="dot" style="background:${tColors[k]||'#94a3b8'}"></div>
-        <span style="flex:1">${k}</span><strong>${v} 時</strong></li>`).join('')}
-    </ul>
-    <div style="margin-top:12px;font-size:13px;color:#64748b">
-      共 ${trainings.length} 場進修活動 ／ 已完成 ${trainings.filter(t=>t.status==='已完成').length} 場
-    </div>`;
+  // Training — show this week and next 2 weeks only
+  const _tToday = new Date(); _tToday.setHours(0,0,0,0);
+  const _tMon = new Date(_tToday); _tMon.setDate(_tToday.getDate() - (_tToday.getDay()||7) + 1);
+  const _tEnd = new Date(_tMon); _tEnd.setDate(_tMon.getDate() + 21);
+  const _tColors = {'教學研究':'#3b82f6','行政研習':'#10b981','輔導知能':'#f59e0b','資訊應用':'#8b5cf6','特教知能':'#ef4444','其他':'#94a3b8'};
+  const _tNearby = trainings.filter(t=>{ const d=new Date(t.date); return d>=_tMon && d<_tEnd; })
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const _tMonths = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  document.getElementById('dashTraining').innerHTML = _tNearby.length ?
+    _tNearby.map(t=>{
+      const [ty,tm,td] = t.date.split('-');
+      const col = _tColors[t.type]||'#94a3b8';
+      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+        <div style="min-width:40px;text-align:center;background:${col}18;border-radius:8px;padding:4px 6px;border-left:3px solid ${col}">
+          <div style="font-size:10px;color:${col};font-weight:600">${_tMonths[+tm-1]}月</div>
+          <div style="font-size:16px;font-weight:700;color:${col}">${+td}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">
+            <span style="background:${col}20;color:${col};border-radius:4px;padding:1px 6px;font-weight:600">${t.type}</span>
+            　${t.hours}時　${t.org||''}
+          </div>
+        </div>
+      </div>`;
+    }).join('') :
+    '<div style="font-size:13px;color:#94a3b8;padding:12px 0;text-align:center">近3週無進修活動</div>';
+
+  renderDashRotation();
 }
 
 function toggleTask(id) {
@@ -2813,6 +2840,37 @@ const SEL_THEME_COLOR = {
 };
 
 let _selRotPage = 0; // 翻頁狀態：0 = 本週起第一組，1 = 下一組
+
+function renderDashRotation() {
+  const el = document.getElementById('dashRotationGrid');
+  if (!el) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
+  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
+  baseIdx = Math.max(0, baseIdx);
+  const rows = SEL_ROTATION.slice(baseIdx, baseIdx + 3);
+  const weekLabels = ['本週', '下週', '再下週'];
+  el.innerHTML = rows.map((r, i) => {
+    const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
+    return `
+    <div style="border:2px solid ${c.border};border-radius:12px;padding:16px;background:${c.bg};position:relative">
+      ${i===0 ? `<span style="position:absolute;top:10px;right:10px;background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">本週</span>` : ''}
+      <div style="font-size:11px;font-weight:700;color:${c.text};opacity:0.7;margin-bottom:4px">${weekLabels[i]}・第${r.week}週</div>
+      <div style="font-size:22px;font-weight:800;color:${c.text};margin-bottom:2px">${r.theme}</div>
+      <div style="font-size:12px;color:${c.text};opacity:0.75;margin-bottom:12px">📅 ${r.date.slice(5)} (週四)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">A組・1.3.5年級</div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b">👤 ${r.A}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">B組・2.4.6年級</div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b">👤 ${r.B}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function renderSelRotation() {
   const el = document.getElementById('selRotationGrid');
