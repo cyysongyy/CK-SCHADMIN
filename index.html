@@ -346,7 +346,7 @@
 <nav class="sidebar">
   <div class="nav-section">主選單</div>
   <button class="nav-item active" onclick="showPage('dashboard',this)">
-    <span class="nav-icon">📊</span> 系統儀表板
+    <span class="nav-icon">📊</span> 系統儀表板 <span id="navSemBadge" style="font-size:11px;font-weight:700;background:#1d4ed8;color:#fff;padding:1px 7px;border-radius:12px;margin-left:4px;vertical-align:middle"></span>
   </button>
   <div class="nav-section">學校事務</div>
   <button class="nav-item" onclick="showPage('calendar',this)">
@@ -390,7 +390,7 @@
 
   <!-- ═══════════════════════════════════════════════════════ DASHBOARD -->
   <section class="page active" id="page-dashboard">
-    <div class="page-title">📊 系統儀表板</div>
+    <div class="page-title">📊 系統儀表板 <span id="semBadge" style="font-size:13px;font-weight:700;background:#1d4ed8;color:#fff;padding:3px 10px;border-radius:20px;margin-left:8px;vertical-align:middle;letter-spacing:1px"></span></div>
 
     <div class="cards-row" id="dashCards"></div>
 
@@ -1496,6 +1496,45 @@ function doLogout() {
   localStorage.removeItem(_AUTH_KEY);
   location.reload();
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  學年度與學期計算
+// ═══════════════════════════════════════════════════════════════
+function getCurrentSemester(date) {
+  const d = date || new Date();
+  const mo = d.getMonth() + 1; // 1-12
+  const ad = d.getFullYear();
+  // 上學期：8月–1月  下學期：2月–7月
+  if (mo >= 8) {
+    return { year: ad - 1911, sem: '上', label: `${ad-1911}上` };
+  } else if (mo === 1) {
+    return { year: ad - 1912, sem: '上', label: `${ad-1912}上` };
+  } else {
+    return { year: ad - 1912, sem: '下', label: `${ad-1912}下` };
+  }
+}
+// 目前學期資訊（全域）
+const _sem = getCurrentSemester();
+const SCHOOL_YEAR = _sem.year;   // 例：114
+const SEMESTER    = _sem.sem;    // '上' 或 '下'
+const SEM_LABEL   = _sem.label;  // 例：'114上'
+// 學期起訖日期
+function getSemesterRange(year, sem) {
+  if (sem === '上') {
+    return {
+      start: new Date(`${year + 1911}-08-01`),
+      end:   new Date(`${year + 1912}-01-31`)
+    };
+  } else {
+    return {
+      start: new Date(`${year + 1912}-02-01`),
+      end:   new Date(`${year + 1912}-07-31`)
+    };
+  }
+}
+const _semRange = getSemesterRange(SCHOOL_YEAR, SEMESTER);
+const SEM_START = _semRange.start;
+const SEM_END   = _semRange.end;
 
 // ═══════════════════════════════════════════════════════════════
 //  DATA STORE (in-memory)
@@ -3779,6 +3818,10 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
       }
     } catch(e){}
   }, err => console.warn('Firebase listener error:', err));
+
+  // 學期徽章
+  document.getElementById('semBadge').textContent    = SEM_LABEL;
+  document.getElementById('navSemBadge').textContent = SEM_LABEL;
 
   // Top bar date
   const days = ['日','一','二','三','四','五','六'];
