@@ -3566,23 +3566,51 @@ function deleteCurrentStaff() {
 function deleteStaff(id) { staffList = staffList.filter(s=>s.id!==id); saveData(); renderStaffPage(); }
 
 // ── 教職員資料手機同步 ──
+// ── 通知 toast ──
+function showToast(msg, color='#1e293b', duration=3000) {
+  let t = document.getElementById('_syncToast');
+  if(!t) {
+    t = document.createElement('div');
+    t.id = '_syncToast';
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:24px;font-size:14px;font-weight:600;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:99999;transition:opacity 0.3s;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.style.background = color;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration);
+}
+
 function openStaffSyncModal() {
   if(typeof LZString === 'undefined') {
-    alert('壓縮函式庫尚未載入，請重新整理頁面後再試。'); return;
+    showToast('⚠️ 函式庫尚未載入，請重新整理後再試', '#dc2626'); return;
   }
   const payload = JSON.stringify({ staffList, nextStaffId, v: Date.now() });
   const compressed = LZString.compressToEncodedURIComponent(payload);
   const url = location.origin + location.pathname + '#staff-sync=' + compressed;
 
+  // 優先：系統分享介面（手機 / 支援分享的桌面瀏覽器）
+  if(navigator.share) {
+    navigator.share({
+      title: '教職員資料同步',
+      text: `辰光國小教職員名冊（${staffList.length} 筆），點擊連結即可同步到此裝置。`,
+      url
+    }).then(() => showToast('✅ 已送出分享！手機點擊連結即可同步', '#15803d'))
+      .catch(() => {}); // 使用者取消不顯示錯誤
+    return;
+  }
+
+  // 備用：複製連結到剪貼簿 + 顯示 modal（含 QR 碼）
   document.getElementById('syncStaffCount').textContent = staffList.length;
   document.getElementById('staffSyncUrl').value = url;
-
-  // QR 碼（Google Charts API）
   const qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url) + '&choe=UTF-8';
   document.getElementById('staffSyncQR').src = qrUrl;
-  document.getElementById('staffSyncQR').alt = 'QR碼';
   document.getElementById('staffSyncCopyMsg').textContent = '';
-  document.getElementById('staffModal') && closeModal('staffModal');
+  // 自動複製
+  navigator.clipboard.writeText(url).then(() => {
+    document.getElementById('staffSyncCopyMsg').textContent = '✅ 連結已自動複製到剪貼簿！';
+  }).catch(() => {});
   document.getElementById('staffSyncModal').classList.add('open');
 }
 
@@ -3591,7 +3619,7 @@ function copyStaffSyncUrl() {
   navigator.clipboard.writeText(url).then(() => {
     const msg = document.getElementById('staffSyncCopyMsg');
     const btn = document.getElementById('staffSyncCopyBtn');
-    msg.textContent = '✅ 連結已複製！請貼到手機瀏覽器或傳送給手機。';
+    msg.textContent = '✅ 連結已複製！請傳到手機後點擊開啟。';
     btn.textContent = '已複製';
     setTimeout(() => { msg.textContent = ''; btn.textContent = '複製'; }, 3000);
   }).catch(() => {
@@ -3601,36 +3629,34 @@ function copyStaffSyncUrl() {
   });
 }
 
-// 頁面載入時偵測同步連結
+// 頁面載入時偵測同步連結 → 靜默自動匯入
 (function checkStaffSyncHash() {
   const hash = location.hash;
   if(!hash.startsWith('#staff-sync=')) return;
   const compressed = hash.slice('#staff-sync='.length);
   if(!compressed) return;
-  try {
-    if(typeof LZString === 'undefined') {
-      // 延遲等 lz-string 載入
-      window.addEventListener('load', checkStaffSyncHash);
-      return;
-    }
-    const raw = LZString.decompressFromEncodedURIComponent(compressed);
-    const data = JSON.parse(raw);
-    if(!Array.isArray(data.staffList)) throw new Error('格式錯誤');
-    const count = data.staffList.length;
-    const ok = confirm(`📲 偵測到同步連結，包含 ${count} 筆教職員資料。\n\n是否匯入並覆蓋目前手機上的教職員資料？`);
-    if(ok) {
+  history.replaceState(null, '', location.pathname); // 立即清除 hash
+
+  function doImport() {
+    try {
+      const raw = LZString.decompressFromEncodedURIComponent(compressed);
+      const data = JSON.parse(raw);
+      if(!Array.isArray(data.staffList)) throw new Error('格式錯誤');
       staffList = data.staffList;
       if(data.nextStaffId) nextStaffId = data.nextStaffId;
       saveData();
-      history.replaceState(null, '', location.pathname); // 清除 hash
-      alert(`✅ 已成功匯入 ${count} 筆教職員資料！`);
-      renderStaffPage && renderStaffPage();
-    } else {
-      history.replaceState(null, '', location.pathname);
+      showToast(`✅ 已同步 ${data.staffList.length} 筆教職員資料`, '#15803d', 4000);
+      if(typeof renderStaffPage === 'function') renderStaffPage();
+    } catch(e) {
+      console.warn('Staff sync parse error:', e);
+      showToast('⚠️ 同步連結解析失敗', '#dc2626');
     }
-  } catch(e) {
-    console.warn('Staff sync parse error:', e);
-    history.replaceState(null, '', location.pathname);
+  }
+
+  if(typeof LZString !== 'undefined') {
+    doImport();
+  } else {
+    window.addEventListener('load', doImport);
   }
 })();
 
