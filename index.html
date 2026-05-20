@@ -702,6 +702,7 @@
               <th>職系/列等</th>
               <th>出生年月日</th>
               <th>年齡</th>
+              <th style="white-space:nowrap">退休日</th>
               <th>距生日</th>
               <th>初任公職日</th>
               <th>服務年資</th>
@@ -1317,6 +1318,13 @@
       <div class="form-group">
         <label class="form-label">備註</label>
         <input class="form-control" id="sf_note" placeholder="備註（選填）">
+      </div>
+      <!-- 子女資料 -->
+      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">子女資料</div>
+      <div class="form-group">
+        <label class="form-label">子女（每位一行）</label>
+        <textarea class="form-control" id="sf_children" placeholder="例：王小明（2010年生，就讀國小）&#10;王小美（2013年生，就讀幼稚園）" style="min-height:80px"></textarea>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">每位子女一行，可填姓名、出生年、就讀學校等資訊</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3219,6 +3227,15 @@ function calcYears(roc) {
   const yrs = now.getFullYear() - d.getFullYear();
   return yrs > 0 ? `${yrs}年` : '未滿1年';
 }
+// 退休日（滿65歲當日）
+function calcRetirement(roc) {
+  const d = rocToDate(roc); if(!d) return '-';
+  const ret = new Date(d.getFullYear()+65, d.getMonth(), d.getDate());
+  const ry = ret.getFullYear() - 1911;
+  const now = new Date(); const isPast = ret < now;
+  const str = `民${ry}/${String(ret.getMonth()+1).padStart(2,'0')}/${String(ret.getDate()).padStart(2,'0')}`;
+  return { str, isPast, date: ret };
+}
 // 距今生日（今年或明年）天數
 function daysUntilBirthday(roc) {
   const d = rocToDate(roc); if(!d) return 9999;
@@ -3333,12 +3350,14 @@ function renderStaffTable() {
       const age = calcAge(s.birth);
       const yrs = calcYears(s.startDate);
       const bdTag = birthdayTag(s.birth);
+      const ret = calcRetirement(s.birth);
+      const retColor = ret.isPast ? '#94a3b8' : '#0f766e';
       return `<tr>
         <td style="text-align:center;color:#94a3b8;font-size:12px">${i+1}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:32px;height:32px;border-radius:50%;background:${AVATAR_BG[s.id%AVATAR_BG.length]};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">${s.name[0]}</div>
-            <strong>${s.name}</strong>
+            <a onclick="editStaff(${s.id})" style="cursor:pointer;color:#1d4ed8;font-weight:700;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${s.name}</a>
           </div>
         </td>
         <td style="text-align:center">${s.gender==='女'?'♀️':'♂️'} ${s.gender}</td>
@@ -3350,6 +3369,7 @@ function renderStaffTable() {
           <div style="color:#94a3b8;font-size:11px">${adDisplay(s.birth)}</div>
         </td>
         <td style="text-align:center;font-weight:700">${age}</td>
+        <td style="white-space:nowrap;font-size:12px;color:${retColor}">${ret==='-'?'-':ret.str}${ret.isPast?'<br><span style="font-size:10px;color:#94a3b8">已達齡</span>':''}</td>
         <td style="white-space:nowrap">${bdTag}</td>
         <td style="font-size:12px;white-space:nowrap">${rocDisplay(s.startDate)}</td>
         <td style="font-size:12px;white-space:nowrap;text-align:center">${yrs}</td>
@@ -3441,7 +3461,7 @@ function openStaffModal() {
   document.getElementById('staffModalTitle').textContent = '新增教職員';
   document.getElementById('sfDeleteBtn').style.display = 'none';
   ['sf_name','sf_title','sf_rank','sf_birth','sf_idno','sf_edu','sf_startDate',
-   'sf_curUnit','sf_currentDate','sf_salary','sf_phone','sf_mobile','sf_exp','sf_addr','sf_note'
+   'sf_curUnit','sf_currentDate','sf_salary','sf_phone','sf_mobile','sf_exp','sf_addr','sf_note','sf_children'
   ].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('sf_gender').value = '女';
   document.getElementById('sf_unit').value = '教導處';
@@ -3469,6 +3489,7 @@ function editStaff(id) {
   document.getElementById('sf_exp').value = s.exp||'';
   document.getElementById('sf_addr').value = s.addr||'';
   document.getElementById('sf_note').value = s.note||'';
+  document.getElementById('sf_children').value = s.children||'';
   document.getElementById('staffModal').classList.add('open');
 }
 function saveStaff() {
@@ -3492,7 +3513,8 @@ function saveStaff() {
     mobile:document.getElementById('sf_mobile').value.trim(),
     exp:document.getElementById('sf_exp').value.trim(),
     addr:document.getElementById('sf_addr').value.trim(),
-    note:document.getElementById('sf_note').value.trim()
+    note:document.getElementById('sf_note').value.trim(),
+    children:document.getElementById('sf_children').value.trim()
   };
   if(editingStaffId) {
     Object.assign(staffList.find(s=>s.id===editingStaffId), obj);
