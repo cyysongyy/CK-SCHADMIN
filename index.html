@@ -6,6 +6,8 @@
 <title>Young校務管理系統</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1439,6 +1441,23 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
+//  FIREBASE  ── Realtime Database 雲端同步
+// ═══════════════════════════════════════════════════════════════
+const _FB_CONFIG = {
+  apiKey: "AIzaSyAj1xigGCfdDFr4UQ_NtEaINoH5jj6sTIA",
+  authDomain: "ck-schadmin.firebaseapp.com",
+  projectId: "ck-schadmin",
+  storageBucket: "ck-schadmin.firebasestorage.app",
+  messagingSenderId: "661490879869",
+  appId: "1:661490879869:web:9fe0b1753b0101b9309014",
+  databaseURL: "https://ck-schadmin-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(_FB_CONFIG);
+const _fbDB = firebase.database();
+const _fbRef = _fbDB.ref('ckData');
+let _fbSyncing = false; // 防止儲存迴圈
+
+// ═══════════════════════════════════════════════════════════════
 //  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
 // ═══════════════════════════════════════════════════════════════
 const _AUTH_KEY = 'yk_auth_v1';
@@ -1650,6 +1669,9 @@ function _loadGrades() {
 function saveGrades() {
   try { localStorage.setItem('cksch_grades', JSON.stringify({ data: grades, nextId: gradeNextId })); }
   catch(e) { console.warn('成績儲存失敗:', e); }
+  if(!_fbSyncing) {
+    _fbRef.update({ grades, gradeNextId, _ts: Date.now() }).catch(e => console.warn('Firebase grades save failed:', e));
+  }
 }
 const _gInit = _loadGrades();
 let grades = _gInit.data; // {id, sid, cls, name, year, semester, stage, subject, score, note}
@@ -1758,7 +1780,7 @@ let selCourses = [
 let nextId = { events: 38, grades: 11, admin: 8, training: 6, sel: 6 };
 let editingId = { events: null, grades: null, admin: null, training: null, sel: null };
 
-// ── localStorage 資料持久化 ──────────────────────────────────
+// ── 資料持久化（localStorage + Firebase）──────────────────────
 function saveData() {
   try {
     localStorage.setItem('ck_events',   JSON.stringify(events));
@@ -1769,6 +1791,12 @@ function saveData() {
     localStorage.setItem('ck_nextId',   JSON.stringify(nextId));
     localStorage.setItem('ck_nextStaffId', String(nextStaffId));
   } catch(e) { console.warn('saveData error:', e); }
+  if(!_fbSyncing) {
+    _fbRef.set({
+      events, staffList, selCourses, adminTasks, trainings, nextId, nextStaffId,
+      grades, gradeNextId, _ts: Date.now()
+    }).catch(e => console.warn('Firebase save failed:', e));
+  }
 }
 function loadData() {
   try {
@@ -3715,8 +3743,42 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 (function init() {
-  // Load persisted data from localStorage
+  // Load persisted data from localStorage (fast, instant)
   loadData();
+
+  // Firebase 即時同步監聽
+  _fbRef.on('value', snapshot => {
+    const d = snapshot.val();
+    if(!d) {
+      // Firebase 尚無資料，把本機資料上傳
+      saveData();
+      return;
+    }
+    _fbSyncing = true;
+    if(d.events    !== undefined) { events = d.events || [];      localStorage.setItem('ck_events',   JSON.stringify(events)); }
+    if(d.staffList !== undefined) { staffList = d.staffList || []; localStorage.setItem('ck_staff',    JSON.stringify(staffList)); }
+    if(d.selCourses!== undefined) { selCourses = d.selCourses||[]; localStorage.setItem('ck_sel',      JSON.stringify(selCourses)); }
+    if(d.adminTasks!== undefined) { adminTasks = d.adminTasks||[]; localStorage.setItem('ck_admin',    JSON.stringify(adminTasks)); }
+    if(d.trainings !== undefined) { trainings = d.trainings||[];   localStorage.setItem('ck_training', JSON.stringify(trainings)); }
+    if(d.nextId    !== undefined) { Object.assign(nextId, d.nextId||{}); localStorage.setItem('ck_nextId', JSON.stringify(nextId)); }
+    if(d.nextStaffId!==undefined) { nextStaffId = d.nextStaffId;  localStorage.setItem('ck_nextStaffId', String(nextStaffId)); }
+    if(d.grades    !== undefined) { grades = d.grades||[];         gradeNextId = d.gradeNextId||1; localStorage.setItem('cksch_grades', JSON.stringify({ data: grades, nextId: gradeNextId })); }
+    _fbSyncing = false;
+    // 重新渲染目前頁面
+    try { renderDashboard(); } catch(e){}
+    try {
+      const ap = document.querySelector('.page.active');
+      if(ap) {
+        const pid = ap.id;
+        if(pid==='page-staff')    renderStaffPage && renderStaffPage();
+        if(pid==='page-calendar') renderCalendar && renderCalendar();
+        if(pid==='page-training') renderTrainingPage && renderTrainingPage();
+        if(pid==='page-grades')   renderGradesPage && renderGradesPage();
+        if(pid==='page-admin')    renderAdminTable && renderAdminTable();
+        if(pid==='page-sel')      renderSelPage && renderSelPage();
+      }
+    } catch(e){}
+  }, err => console.warn('Firebase listener error:', err));
 
   // Top bar date
   const days = ['日','一','二','三','四','五','六'];
