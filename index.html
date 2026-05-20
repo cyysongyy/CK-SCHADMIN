@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Young校務管理系統</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -650,6 +651,7 @@
     <div class="page-title">👩‍🏫 教職員名冊
       <span style="font-size:13px;font-weight:400;color:#64748b;margin-left:6px">雲林縣北港鎮辰光國民小學</span>
       <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="openStaffSyncModal()" style="background:#f0fdf4;color:#15803d;border-color:#86efac">📲 同步到手機</button>
         <button class="btn btn-outline btn-sm" onclick="toggleStaffView()" id="staffViewBtn">🃏 卡片視圖</button>
         <button class="btn btn-primary btn-sm" onclick="openStaffModal()">＋ 新增人員</button>
       </div>
@@ -1331,6 +1333,36 @@
       <button class="btn btn-danger btn-sm" id="sfDeleteBtn" style="margin-right:auto;display:none" onclick="deleteCurrentStaff()">🗑 刪除此人員</button>
       <button class="btn btn-outline" onclick="closeModal('staffModal')">取消</button>
       <button class="btn btn-primary" onclick="saveStaff()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Sync Modal -->
+<div class="modal-overlay" id="staffSyncModal" onclick="if(event.target===this)closeModal('staffSyncModal')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="background:#f0fdf4">
+      <span class="modal-title" style="color:#15803d">📲 同步教職員資料到手機</span>
+      <button class="modal-close" onclick="closeModal('staffSyncModal')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <div style="font-size:13px;color:#374151;margin-bottom:16px;line-height:1.7">
+        手機掃描 QR 碼，或複製連結後在手機瀏覽器開啟，<br>即可自動匯入目前的教職員資料（共 <strong id="syncStaffCount">0</strong> 筆）。
+      </div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;display:inline-block">
+        <img id="staffSyncQR" src="" alt="QR碼產生中..." style="width:200px;height:200px;display:block">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="staffSyncUrl" class="form-control" readonly style="flex:1;font-size:11px;color:#64748b" value="">
+        <button class="btn btn-primary btn-sm" onclick="copyStaffSyncUrl()" id="staffSyncCopyBtn">複製</button>
+      </div>
+      <div id="staffSyncCopyMsg" style="font-size:12px;color:#15803d;height:16px"></div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:12px;line-height:1.6">
+        ⚠️ 手機開啟連結後，頁面會自動詢問是否匯入資料。<br>
+        此連結包含完整資料，請勿分享給不相關人員。
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('staffSyncModal')">關閉</button>
     </div>
   </div>
 </div>
@@ -3532,6 +3564,75 @@ function deleteCurrentStaff() {
   }
 }
 function deleteStaff(id) { staffList = staffList.filter(s=>s.id!==id); saveData(); renderStaffPage(); }
+
+// ── 教職員資料手機同步 ──
+function openStaffSyncModal() {
+  if(typeof LZString === 'undefined') {
+    alert('壓縮函式庫尚未載入，請重新整理頁面後再試。'); return;
+  }
+  const payload = JSON.stringify({ staffList, nextStaffId, v: Date.now() });
+  const compressed = LZString.compressToEncodedURIComponent(payload);
+  const url = location.origin + location.pathname + '#staff-sync=' + compressed;
+
+  document.getElementById('syncStaffCount').textContent = staffList.length;
+  document.getElementById('staffSyncUrl').value = url;
+
+  // QR 碼（Google Charts API）
+  const qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url) + '&choe=UTF-8';
+  document.getElementById('staffSyncQR').src = qrUrl;
+  document.getElementById('staffSyncQR').alt = 'QR碼';
+  document.getElementById('staffSyncCopyMsg').textContent = '';
+  document.getElementById('staffModal') && closeModal('staffModal');
+  document.getElementById('staffSyncModal').classList.add('open');
+}
+
+function copyStaffSyncUrl() {
+  const url = document.getElementById('staffSyncUrl').value;
+  navigator.clipboard.writeText(url).then(() => {
+    const msg = document.getElementById('staffSyncCopyMsg');
+    const btn = document.getElementById('staffSyncCopyBtn');
+    msg.textContent = '✅ 連結已複製！請貼到手機瀏覽器或傳送給手機。';
+    btn.textContent = '已複製';
+    setTimeout(() => { msg.textContent = ''; btn.textContent = '複製'; }, 3000);
+  }).catch(() => {
+    const el = document.getElementById('staffSyncUrl');
+    el.select(); document.execCommand('copy');
+    document.getElementById('staffSyncCopyMsg').textContent = '✅ 已複製！';
+  });
+}
+
+// 頁面載入時偵測同步連結
+(function checkStaffSyncHash() {
+  const hash = location.hash;
+  if(!hash.startsWith('#staff-sync=')) return;
+  const compressed = hash.slice('#staff-sync='.length);
+  if(!compressed) return;
+  try {
+    if(typeof LZString === 'undefined') {
+      // 延遲等 lz-string 載入
+      window.addEventListener('load', checkStaffSyncHash);
+      return;
+    }
+    const raw = LZString.decompressFromEncodedURIComponent(compressed);
+    const data = JSON.parse(raw);
+    if(!Array.isArray(data.staffList)) throw new Error('格式錯誤');
+    const count = data.staffList.length;
+    const ok = confirm(`📲 偵測到同步連結，包含 ${count} 筆教職員資料。\n\n是否匯入並覆蓋目前手機上的教職員資料？`);
+    if(ok) {
+      staffList = data.staffList;
+      if(data.nextStaffId) nextStaffId = data.nextStaffId;
+      saveData();
+      history.replaceState(null, '', location.pathname); // 清除 hash
+      alert(`✅ 已成功匯入 ${count} 筆教職員資料！`);
+      renderStaffPage && renderStaffPage();
+    } else {
+      history.replaceState(null, '', location.pathname);
+    }
+  } catch(e) {
+    console.warn('Staff sync parse error:', e);
+    history.replaceState(null, '', location.pathname);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  GOOGLE DRIVE PAGE
