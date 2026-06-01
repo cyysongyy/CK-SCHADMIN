@@ -1477,7 +1477,7 @@ let _fbSyncing = false; // 防止儲存迴圈
 // ═══════════════════════════════════════════════════════════════
 //  GAS 週三進修即時讀取 — 部署後填入 URL
 // ═══════════════════════════════════════════════════════════════
-const GAS_TRAINING_URL = 'https://script.google.com/macros/s/AKfycbwWKHDDo_oXRfOQm8mrZ5Keq9ZeAgV7Jtks9oKdj03HFnQpDnXM_cYhl9jH-oQHS-kX2g/exec';
+const GAS_TRAINING_URL = 'https://cyysongyy.github.io/CK-SCHADMIN/training.json';
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
@@ -2004,19 +2004,19 @@ async function fetchWeeklyTraining() {
     const res  = await fetch(GAS_TRAINING_URL);
     const data = await res.json();
 
-    if (!data.found) {
-      block.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 ${data.message || '本週夕會報告尚未上傳，請稍後再按更新'}</div>`;
+    if (!data.trainingName) {
+      block.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 本週夕會報告尚未更新，請稍後再按更新</div>`;
     } else {
-      // 計算本週三顯示用
       const [, wm, wd] = (data.wedDate || '').split('-');
       const wedLabel = wm && wd ? `${parseInt(wm)}/${parseInt(wd)}（週三）` : '本週三';
+      const loc = data.location ? `　📍 ${data.location}` : '';
       block.innerHTML = `
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px">
           <div style="font-size:22px;line-height:1">📋</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;color:#1d4ed8;font-weight:700;margin-bottom:2px">本週週三進修 ${wedLabel}</div>
-            <div style="font-size:14px;font-weight:700;color:#1e293b">${data.trainingName}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:3px">📂 ${data.fileName || ''}</div>
+            <div style="font-size:14px;font-weight:700;color:#1e293b">${data.trainingName}${loc}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:3px">📂 ${data.source || ''}</div>
           </div>
           <span style="background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">夕會報告</span>
         </div>`;
