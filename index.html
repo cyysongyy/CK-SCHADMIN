@@ -420,7 +420,13 @@
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">🎓 教師進修近期活動</span>
+          <button id="gasTrainingBtn" onclick="fetchWeeklyTraining()"
+            style="margin-left:auto;font-size:12px;padding:4px 12px;border:none;border-radius:8px;background:#1d4ed8;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap">
+            🔄 更新進修
+          </button>
         </div>
+        <!-- 夕會報告即時進修區塊 -->
+        <div id="gasTrainingBlock" style="padding:10px 20px 0"></div>
         <div class="panel-body" id="dashTraining"></div>
       </div>
     </div>
@@ -1469,6 +1475,11 @@ const _fbRef = _fbDB.ref('ckData');
 let _fbSyncing = false; // 防止儲存迴圈
 
 // ═══════════════════════════════════════════════════════════════
+//  GAS 週三進修即時讀取 — 部署後填入 URL
+// ═══════════════════════════════════════════════════════════════
+const GAS_TRAINING_URL = 'https://script.google.com/macros/s/AKfycbwWKHDDo_oXRfOQm8mrZ5Keq9ZeAgV7Jtks9oKdj03HFnQpDnXM_cYhl9jH-oQHS-kX2g/exec';
+
+// ═══════════════════════════════════════════════════════════════
 //  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
 // ═══════════════════════════════════════════════════════════════
 const _AUTH_KEY = 'yk_auth_v1';
@@ -1747,11 +1758,9 @@ let trainings = [
   {id:3,name:'特殊生輔導策略工作坊',teacher:'吳老師',type:'特教知能',date:`${yy}-${mm}-18`,hours:6,org:'特教中心',status:'已報名',note:''},
   {id:4,name:'班級經營策略研習',teacher:'黃老師, 蔡老師, 楊老師',type:'輔導知能',date:`${yy}-11-05`,hours:3,org:'教育局',status:'已報名',note:''},
   {id:5,name:'行政人員法規研習',teacher:'教務主任, 訓導主任',type:'行政研習',date:`${yy}-09-25`,hours:4,org:'教育局',status:'已完成',note:''},
-  // 114下學期 週三進修（來源：夕會報告 黃雅玲主任）
-  {id:101,name:'食農教育（燒肉製作法）',teacher:'全體教師',type:'教學研究',date:'2026-06-03',hours:3,org:'辰光國小',status:'待辦',note:'地點：中廊。夕會報告來源：黃雅玲主任 第15週0601'},
-  {id:102,name:'吉他及兒童權利公約',teacher:'全體教師',type:'教學研究',date:'2026-06-10',hours:3,org:'辰光國小',status:'待辦',note:'夕會報告來源：黃雅玲主任'},
-  {id:103,name:'運動舞起來（舞蹈韻律與體能訓練）',teacher:'全體教師',type:'教學研究',date:'2026-06-17',hours:3,org:'辰光國小',status:'待辦',note:'夕會報告來源：黃雅玲主任'},
-  {id:104,name:'校本分享',teacher:'全體教師',type:'教學研究',date:'2026-06-24',hours:3,org:'辰光國小',status:'待辦',note:'夕會報告來源：黃雅玲主任'},
+  // ===AUTO-WEEKLY-TRAINING-START===
+  {id:101,name:'食農教育（燒肉製作法）',teacher:'全體教師',type:'教學研究',date:'2026-06-03',hours:3,org:'辰光國小',status:'待辦',note:'地點：中廊。來源：夕會報告黃雅玲主任 第15週0601'},
+  // ===AUTO-WEEKLY-TRAINING-END===
 ];
 
 // ── 教職員名冊 ──
@@ -1977,6 +1986,48 @@ function confirmDel(fn) { if(confirm('確定要刪除此筆資料？')) fn(); }
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════════
+// ── 夕會報告週三進修即時讀取 ──
+async function fetchWeeklyTraining() {
+  const btn   = document.getElementById('gasTrainingBtn');
+  const block = document.getElementById('gasTrainingBlock');
+  if (!block) return;
+
+  if (!GAS_TRAINING_URL) {
+    block.innerHTML = '<div style="font-size:12px;color:#f59e0b;padding:6px 0 10px;text-align:center">⚠️ 尚未設定 GAS 連結，請聯絡系統管理員</div>';
+    return;
+  }
+
+  if (btn) { btn.textContent = '⏳ 讀取中…'; btn.disabled = true; }
+  block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">正在從 Google Drive 讀取夕會報告…</div>';
+
+  try {
+    const res  = await fetch(GAS_TRAINING_URL);
+    const data = await res.json();
+
+    if (!data.found) {
+      block.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 ${data.message || '本週夕會報告尚未上傳，請稍後再按更新'}</div>`;
+    } else {
+      // 計算本週三顯示用
+      const [, wm, wd] = (data.wedDate || '').split('-');
+      const wedLabel = wm && wd ? `${parseInt(wm)}/${parseInt(wd)}（週三）` : '本週三';
+      block.innerHTML = `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px">
+          <div style="font-size:22px;line-height:1">📋</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;color:#1d4ed8;font-weight:700;margin-bottom:2px">本週週三進修 ${wedLabel}</div>
+            <div style="font-size:14px;font-weight:700;color:#1e293b">${data.trainingName}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:3px">📂 ${data.fileName || ''}</div>
+          </div>
+          <span style="background:#1d4ed8;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">夕會報告</span>
+        </div>`;
+    }
+  } catch (e) {
+    block.innerHTML = '<div style="font-size:12px;color:#ef4444;padding:6px 0 10px;text-align:center">讀取失敗，請確認網路連線後再試</div>';
+  }
+
+  if (btn) { btn.textContent = '🔄 更新進修'; btn.disabled = false; }
+}
+
 function renderDashBirthday() {
   const listEl = document.getElementById('dashBirthdayList');
   const subEl  = document.getElementById('dashBirthdaySubtitle');
@@ -3914,6 +3965,8 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   calYear = tw.getFullYear(); calMonth = tw.getMonth();
 
   renderDashboard();
+  // 頁面載入時自動讀取本週夕會進修資料（有設定 GAS URL 才執行）
+  if (GAS_TRAINING_URL) fetchWeeklyTraining();
 
   // 自動定期更新衝突偵測：每 30 分鐘重新計算一次（頁面在行事曆時才執行）
   setInterval(() => {
