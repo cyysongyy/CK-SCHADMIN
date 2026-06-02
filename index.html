@@ -1477,7 +1477,7 @@ let _fbSyncing = false; // 防止儲存迴圈
 // ═══════════════════════════════════════════════════════════════
 //  GAS 週三進修即時讀取 — 部署後填入 URL
 // ═══════════════════════════════════════════════════════════════
-const GAS_TRAINING_URL = 'https://cyysongyy.github.io/CK-SCHADMIN/training.json';
+const GAS_TRAINING_URL = ''; // 已改用 Firebase，不需要此 URL
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
@@ -1986,26 +1986,21 @@ function confirmDel(fn) { if(confirm('確定要刪除此筆資料？')) fn(); }
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-// ── 夕會報告週三進修即時讀取 ──
+// ── 週三進修（從 Firebase 即時讀取）──
 async function fetchWeeklyTraining() {
   const btn   = document.getElementById('gasTrainingBtn');
   const block = document.getElementById('gasTrainingBlock');
   if (!block) return;
 
-  if (!GAS_TRAINING_URL) {
-    block.innerHTML = '<div style="font-size:12px;color:#f59e0b;padding:6px 0 10px;text-align:center">⚠️ 尚未設定 GAS 連結，請聯絡系統管理員</div>';
-    return;
-  }
-
   if (btn) { btn.textContent = '⏳ 讀取中…'; btn.disabled = true; }
-  block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">正在從 Google Drive 讀取夕會報告…</div>';
+  block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">正在讀取本週進修資料…</div>';
 
   try {
-    const res  = await fetch(GAS_TRAINING_URL);
-    const data = await res.json();
+    const snap = await _fbDB.ref('weeklyTraining').once('value');
+    const data = snap.val();
 
-    if (!data.trainingName) {
-      block.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 本週夕會報告尚未更新，請稍後再按更新</div>`;
+    if (!data || !data.trainingName) {
+      block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 本週進修資料尚未更新</div>';
     } else {
       const [, wm, wd] = (data.wedDate || '').split('-');
       const wedLabel = wm && wd ? `${parseInt(wm)}/${parseInt(wd)}（週三）` : '本週三';
