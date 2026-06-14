@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=dhevice-width, initial-scale=1.0">
 <title>Young校務管理系統</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
@@ -3180,7 +3180,7 @@ function renderDashRotation() {
   if (!el) return;
   const today = new Date(); today.setHours(0,0,0,0);
   let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
-  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
+  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 1;
   baseIdx = Math.max(0, baseIdx);
   const rows = SEL_ROTATION.slice(baseIdx, baseIdx + 3);
   const weekLabels = ['本週', '下週', '再下週'];
