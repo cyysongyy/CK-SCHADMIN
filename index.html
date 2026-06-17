@@ -2010,12 +2010,11 @@ async function fetchWeeklyTraining() {
     const res  = await fetch(GAS_TRAINING_URL);
     const data = await res.json();
 
-    // 從 Drive 檔名（如「第17週-0615.docx」）取出週次，更新標題列
-    if (data && data.fileName) {
-      const wm = data.fileName.match(/第(\d+)週/);
-      const dwEl = document.getElementById('dashDateWeek');
-      if (wm && dwEl) dwEl.textContent = `第 ${wm[1]} 週`;
-    }
+    // 從 fileName 或 source 取出週次（如「第17週-0615.docx」）更新標題列
+    const _weekSrc = (data && (data.fileName || data.source || ''));
+    const _wm = _weekSrc && _weekSrc.match(/第(\d+)週/);
+    const dwEl = document.getElementById('dashDateWeek');
+    if (_wm && dwEl) dwEl.textContent = `第 ${_wm[1]} 週`;
 
     if (!data || !data.found || !data.trainingName || data.trainingName === '（請查閱夕會報告）') {
       const msg = data && data.message ? data.message : '本週夕會報告尚未上傳，請稍後再按更新';
