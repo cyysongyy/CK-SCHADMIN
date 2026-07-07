@@ -4579,3 +4579,202 @@ async function getMeetingFiles(folderId) {
 </script>
 </body>
 </html>
+
+<!-- =============================================================
+     雲端同步模組  Cloud Sync  v1.0
+     localStorage  <->  Firebase Realtime Database
+     用途：讓「所有資料」自動存到後台，不同載具即時同步。
+     ============================================================= -->
+<script>
+(function () {
+  'use strict';
+
+  /* ========== ① 設定（可自行調整） ========== */
+  const SYNC_PATH = 'lsSync';
+  const EXCLUDE = [
+    /pin/i, /key/i, /金鑰/, /token/i, /secret/i, /pass|pwd/i,
+    /cred/i, /oauth|gsi/i, /auth/i, /login/i, /__lsSync/
+  ];
+  const FIREBASE_CONFIG = null;
+  const RELOAD_DEBOUNCE = 1500;
+
+  /* ========== ② 內部狀態 ========== */
+  const META_KEY  = '__lsSyncMeta';
+  const nativeSet    = Storage.prototype.setItem;
+  const nativeRemove = Storage.prototype.removeItem;
+  let ref = null;
+  let applying = false;
+  const pushQueue = new Set();
+  let pushTimer = null, reloadTimer = null, ready = false;
+
+  function meta()      { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch (e) { return {}; } }
+  function saveMeta(m) { nativeSet.call(localStorage, META_KEY, JSON.stringify(m)); }
+  function isExcluded(k){ return !k || EXCLUDE.some(r => r.test(k)); }
+  function enc(k){ return btoa(unescape(encodeURIComponent(k))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
+  function dec(e){ e = e.replace(/-/g,'+').replace(/_/g,'/'); return decodeURIComponent(escape(atob(e))); }
+
+  /* ========== ③ 畫面小徽章 ========== */
+  const badge = document.createElement('div');
+  badge.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:99999;background:#1e293b;color:#fff;font:600 12px/1 "Microsoft JhengHei",sans-serif;padding:8px 12px;border-radius:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);user-select:none;opacity:.92';
+  badge.textContent = '☁️ 同步啟動中…';
+  function setBadge(t, bg){ badge.textContent = t; if (bg) badge.style.background = bg; }
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
+  if (document.body) document.body.appendChild(badge);
+  badge.addEventListener('click', () => {
+    if (!ready) return;
+    const c = prompt('雲端同步\n輸入 U = 以「本機」覆蓋雲端\n輸入 D = 以「雲端」覆蓋本機\n（一般情況不需要，直接關閉即可）');
+    if (c && c.toUpperCase() === 'U') forceUpload();
+    if (c && c.toUpperCase() === 'D') forceDownload();
+  });
+
+  /* ========== ④ 推送本機 -> 雲端 ========== */
+  function queuePush(k){ if (isExcluded(k)) return; pushQueue.add(k); schedulePush(); }
+  function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(flushPush, 300); }
+  function flushPush(){
+    if (!ready || !ref) { schedulePush(); return; }
+    const m = meta();
+    setBadge('☁️ 同步中…', '#2563eb');
+    pushQueue.forEach(k => {
+      const exists = localStorage.getItem(k);
+      const t = Date.now();
+      m[k] = t;
+      ref.child(enc(k)).set({ v: exists === null ? null : exists, t: t })
+        .catch(() => setBadge('⚠️ 同步失敗', '#ef4444'));
+    });
+    pushQueue.clear();
+    saveMeta(m);
+    setTimeout(() => ready && setBadge('☁️ 已同步', '#10b981'), 600);
+  }
+
+  /* ========== ⑤ 套用 雲端 -> 本機 ========== */
+  function applyRemote(k, remote){
+    if (isExcluded(k) || !remote || typeof remote.t !== 'number') return false;
+    const m = meta();
+    if (remote.t <= (m[k] || 0)) return false;
+    applying = true;
+    if (remote.v === null || remote.v === undefined) nativeRemove.call(localStorage, k);
+    else nativeSet.call(localStorage, k, remote.v);
+    applying = false;
+    m[k] = remote.t; saveMeta(m);
+    return true;
+  }
+  function scheduleReload(){
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => {
+      const el = document.activeElement;
+      const typing = el && /INPUT|TEXTAREA|SELECT/.test(el.tagName || '') || (el && el.isContentEditable);
+      const modalOpen = [...document.querySelectorAll('.modal-overlay')].some(o => getComputedStyle(o).display !== 'none' && o.offsetParent !== null);
+      if (typing || modalOpen) { showRefreshButton(); } else { location.reload(); }
+    }, RELOAD_DEBOUNCE);
+  }
+  let refreshBtn = null;
+  function showRefreshButton(){
+    if (refreshBtn) return;
+    refreshBtn = document.createElement('div');
+    refreshBtn.textContent = '☁️ 雲端有更新，點此重新整理';
+    refreshBtn.style.cssText = 'position:fixed;left:50%;bottom:60px;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#fff;font:600 13px/1 "Microsoft JhengHei",sans-serif;padding:10px 16px;border-radius:22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)';
+    refreshBtn.onclick = () => location.reload();
+    document.body.appendChild(refreshBtn);
+  }
+
+  /* ========== ⑥ 手動強制方向 ========== */
+  function forceUpload(){
+    if (!ref) return;
+    const m = meta(); const now = Date.now();
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (isExcluded(k)) continue;
+      m[k] = now;
+      ref.child(enc(k)).set({ v: localStorage.getItem(k), t: now });
+    }
+    saveMeta(m); setBadge('☁️ 已上傳本機', '#10b981');
+  }
+  function forceDownload(){
+    if (!ref) return;
+    ref.once('value').then(snap => {
+      const m = meta();
+      snap.forEach(ch => {
+        let k; try { k = dec(ch.key); } catch(e){ return; }
+        if (isExcluded(k)) return;
+        const r = ch.val() || {};
+        applying = true;
+        if (r.v === null || r.v === undefined) nativeRemove.call(localStorage, k);
+        else nativeSet.call(localStorage, k, r.v);
+        applying = false;
+        m[k] = Date.now();
+      });
+      saveMeta(m); location.reload();
+    });
+  }
+
+  /* ========== ⑦ 攔截 localStorage 寫入 ========== */
+  Storage.prototype.setItem = function (k, v) {
+    nativeSet.call(this, k, v);
+    if (this === window.localStorage && !applying) queuePush(k);
+  };
+  Storage.prototype.removeItem = function (k) {
+    nativeRemove.call(this, k);
+    if (this === window.localStorage && !applying) queuePush(k);
+  };
+
+  /* ========== ⑧ 啟動 ========== */
+  function boot(){
+    ref = firebase.database().ref(SYNC_PATH);
+    ready = true;
+    setBadge('☁️ 已連線', '#10b981');
+    ref.once('value').then(snap => {
+      const m = meta();
+      const remoteKeys = {};
+      let changed = false;
+      snap.forEach(ch => {
+        let k; try { k = dec(ch.key); } catch(e){ return; }
+        remoteKeys[k] = true;
+        if (applyRemote(k, ch.val())) changed = true;
+      });
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (isExcluded(k) || remoteKeys[k]) continue;
+        queuePush(k);
+      }
+      ref.on('child_added',   s => onRemote(s));
+      ref.on('child_changed', s => onRemote(s));
+      if (changed) scheduleReload();
+    }).catch(err => {
+      console.error('[CloudSync]', err);
+      setBadge('⚠️ 無法連線 Firebase（檢查規則/設定）', '#ef4444');
+    });
+  }
+  function onRemote(snap){
+    let k; try { k = dec(snap.key); } catch(e){ return; }
+    if (applyRemote(k, snap.val())) scheduleReload();
+  }
+  function loadSdkThen(cb){
+    if (window.firebase && firebase.database) return cb();
+    const urls = [
+      'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js'
+    ];
+    let i = 0;
+    (function next(){
+      if (i >= urls.length) return cb();
+      const s = document.createElement('script');
+      s.src = urls[i++]; s.onload = next; s.onerror = next;
+      document.head.appendChild(s);
+    })();
+  }
+  function waitReady(){
+    let tries = 0;
+    const iv = setInterval(() => {
+      const hasFb = window.firebase && firebase.apps;
+      if (hasFb && firebase.apps.length) { clearInterval(iv); boot(); }
+      else if (hasFb && FIREBASE_CONFIG)  { clearInterval(iv); firebase.initializeApp(FIREBASE_CONFIG); boot(); }
+      else if (++tries > 120)             { clearInterval(iv); setBadge('⚠️ 未偵測到 Firebase', '#ef4444'); }
+    }, 100);
+  }
+  if (FIREBASE_CONFIG && !(window.firebase && firebase.apps && firebase.apps.length)) {
+    loadSdkThen(() => { if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG); boot(); });
+  } else {
+    waitReady();
+  }
+})();
+</script>
