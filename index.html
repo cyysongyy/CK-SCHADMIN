@@ -4580,26 +4580,29 @@ async function getMeetingFiles(folderId) {
 </body>
 </html>
 
+
 <!-- =============================================================
-     雲端同步模組  Cloud Sync  v1.0
+     雲端同步模組  Cloud Sync  v1.1
      localStorage  <->  Firebase Realtime Database
-     用途：讓「所有資料」自動存到後台，不同載具即時同步。
+     v1.1: 修正多裝置同時開啟時畫面不斷刷新的問題
      ============================================================= -->
 <script>
 (function () {
   'use strict';
 
-  /* ========== ① 設定（可自行調整） ========== */
+  /* ========== ① 設定 ========== */
   const SYNC_PATH = 'lsSync';
   const EXCLUDE = [
     /pin/i, /key/i, /金鑰/, /token/i, /secret/i, /pass|pwd/i,
     /cred/i, /oauth|gsi/i, /auth/i, /login/i, /__lsSync/
   ];
   const FIREBASE_CONFIG = null;
-  const RELOAD_DEBOUNCE = 1500;
+  const RELOAD_COOLDOWN = 8000;
+  const RELOAD_DELAY    = 1200;
 
   /* ========== ② 內部狀態 ========== */
   const META_KEY  = '__lsSyncMeta';
+  const RELOAD_KEY = '__lsSyncReloadAt';
   const nativeSet    = Storage.prototype.setItem;
   const nativeRemove = Storage.prototype.removeItem;
   let ref = null;
@@ -4632,18 +4635,20 @@ async function getMeetingFiles(folderId) {
   function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(flushPush, 300); }
   function flushPush(){
     if (!ready || !ref) { schedulePush(); return; }
+    if (pushQueue.size === 0) return;
     const m = meta();
     setBadge('☁️ 同步中…', '#2563eb');
+    let pending = pushQueue.size, failed = false;
     pushQueue.forEach(k => {
       const exists = localStorage.getItem(k);
       const t = Date.now();
       m[k] = t;
       ref.child(enc(k)).set({ v: exists === null ? null : exists, t: t })
-        .catch(() => setBadge('⚠️ 同步失敗', '#ef4444'));
+        .catch(() => { failed = true; })
+        .finally(() => { if (--pending <= 0) setBadge(failed ? '⚠️ 同步失敗（檢查規則）' : '☁️ 已同步', failed ? '#ef4444' : '#10b981'); });
     });
     pushQueue.clear();
     saveMeta(m);
-    setTimeout(() => ready && setBadge('☁️ 已同步', '#10b981'), 600);
   }
 
   /* ========== ⑤ 套用 雲端 -> 本機 ========== */
@@ -4658,14 +4663,21 @@ async function getMeetingFiles(folderId) {
     m[k] = remote.t; saveMeta(m);
     return true;
   }
+
   function scheduleReload(){
     clearTimeout(reloadTimer);
     reloadTimer = setTimeout(() => {
       const el = document.activeElement;
-      const typing = el && /INPUT|TEXTAREA|SELECT/.test(el.tagName || '') || (el && el.isContentEditable);
+      const typing = (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName || '')) || (el && el.isContentEditable);
       const modalOpen = [...document.querySelectorAll('.modal-overlay')].some(o => getComputedStyle(o).display !== 'none' && o.offsetParent !== null);
-      if (typing || modalOpen) { showRefreshButton(); } else { location.reload(); }
-    }, RELOAD_DEBOUNCE);
+      const last = +sessionStorage.getItem(RELOAD_KEY) || 0;
+      if (typing || modalOpen || (Date.now() - last < RELOAD_COOLDOWN)) {
+        showRefreshButton();
+      } else {
+        sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+        location.reload();
+      }
+    }, RELOAD_DELAY);
   }
   let refreshBtn = null;
   function showRefreshButton(){
@@ -4707,14 +4719,16 @@ async function getMeetingFiles(folderId) {
     });
   }
 
-  /* ========== ⑦ 攔截 localStorage 寫入 ========== */
+  /* ========== ⑦ 攔截 localStorage 寫入（值沒變就不推送） ========== */
   Storage.prototype.setItem = function (k, v) {
+    const changed = this !== window.localStorage || this.getItem(k) !== v;
     nativeSet.call(this, k, v);
-    if (this === window.localStorage && !applying) queuePush(k);
+    if (this === window.localStorage && !applying && changed) queuePush(k);
   };
   Storage.prototype.removeItem = function (k) {
+    const had = this.getItem(k) !== null;
     nativeRemove.call(this, k);
-    if (this === window.localStorage && !applying) queuePush(k);
+    if (this === window.localStorage && !applying && had) queuePush(k);
   };
 
   /* ========== ⑧ 啟動 ========== */
