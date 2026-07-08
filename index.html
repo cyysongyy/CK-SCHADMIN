@@ -4623,7 +4623,9 @@ async function getMeetingFiles(folderId) {
   const SYNC_PATH = 'lsSync';
   const EXCLUDE = [
     /pin/i, /key/i, /金鑰/, /token/i, /secret/i, /pass|pwd/i,
-    /cred/i, /oauth|gsi/i, /auth/i, /login/i, /__lsSync/
+    /cred/i, /oauth|gsi/i, /auth/i, /login/i, /__lsSync/,
+    // ck_* 與 cksch_* 已由 ckData 層即時同步，lsSync 不再重複鏡像（否則兩層互相觸發、無限同步）
+    /^ck_/, /^cksch_/
   ];
   const FIREBASE_CONFIG = null;
   const RELOAD_COOLDOWN = 8000;
