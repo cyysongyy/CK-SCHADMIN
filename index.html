@@ -1484,6 +1484,14 @@ let _fbSyncing = false; // 防止儲存迴圈
 const GAS_TRAINING_URL = 'https://script.google.com/macros/s/AKfycbzWt8D4DkZbkDT-2LS_l4rIEG6YxCjIvTkxJO-Ze912Pe3xO0wJkRUL9wK1440k8JON/exec';
 
 // ═══════════════════════════════════════════════════════════════
+//  GAS 學生名冊即時讀取（roster_gas.js）— 部署後填入 URL
+//  學生姓名不再寫死在這份公開原始碼裡，改成執行期從私有試算表讀取，
+//  本機會快取一份到 localStorage（ck_roster_cache），下次開啟先用
+//  快取顯示，背景再更新，資料有變動時會自動重新整理頁面套用。
+// ═══════════════════════════════════════════════════════════════
+const GAS_ROSTER_URL = '';
+
+// ═══════════════════════════════════════════════════════════════
 //  AUTH  ── Firebase Google 登入，僅允許白名單帳戶
 //  （資料庫規則同步限制相同白名單，前端檢查只是提早給錯誤訊息）
 // ═══════════════════════════════════════════════════════════════
@@ -1705,8 +1713,11 @@ let events = [
 // SEL 校本課程資料已移至 renderSelCurriculumTable() 函式（來源：Drive 教案資料夾）
 // https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy
 
-// ── 真實學生名冊（來源：114學年度第2學期各班成績表.xlsx）──
-const STUDENT_ROSTER = [
+// ── 學生名冊：姓名不再寫死在公開原始碼裡（改由 GAS_ROSTER_URL 執行期讀取）。
+// 下面這份只是「結構骨架」（班級/座號/學號，name 留空）——
+// 在 GAS_ROSTER_URL 還沒設定，或第一次讀取尚未完成之前的保底資料，
+// 讓班級人數統計等功能不會整個壞掉，只是暫時看不到姓名而已。
+const STUDENT_ROSTER_FALLBACK = [
   // 1年甲班
   {cls:'1年甲班',gradeNum:1,seat:1,sid:'114001',name:''},
   {cls:'1年甲班',gradeNum:1,seat:2,sid:'114002',name:''},
@@ -1746,6 +1757,33 @@ const STUDENT_ROSTER = [
   {cls:'6年甲班',gradeNum:6,seat:2,sid:'109002',name:''},
   {cls:'6年甲班',gradeNum:6,seat:3,sid:'109004',name:''},
 ];
+// 實際使用的名冊：先用本機快取（若有），否則用上面的骨架保底；
+// 兩者都用「同一個陣列參照」原地更新（不重新賦值），這樣其他地方
+// 用 STUDENT_ROSTER.filter(...) / .find(...) 讀到的永遠是最新內容。
+const STUDENT_ROSTER = (function(){
+  try {
+    const cached = JSON.parse(localStorage.getItem('ck_roster_cache'));
+    if (Array.isArray(cached) && cached.length) return cached;
+  } catch (e) { /* 快取壞掉就用骨架 */ }
+  return STUDENT_ROSTER_FALLBACK.slice();
+})();
+function refreshRoster() {
+  if (!GAS_ROSTER_URL) return;
+  fetch(GAS_ROSTER_URL + '?action=roster')
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok || !Array.isArray(d.roster) || !d.roster.length) return;
+      const changed = JSON.stringify(d.roster) !== JSON.stringify(STUDENT_ROSTER);
+      localStorage.setItem('ck_roster_cache', JSON.stringify(d.roster));
+      if (changed) {
+        // 名冊內容變了（例如第一次成功讀到真實姓名，或新增/異動學生），
+        // 畫面上可能已經用舊資料算過/畫過一次，重新整理最保險。
+        location.reload();
+      }
+    })
+    .catch(e => console.warn('roster fetch failed:', e));
+}
+refreshRoster();
 const ALL_CLASSES = ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班'];
 const SUBJECTS_LOW  = ['國語','數學','生活','體育','藝術'];      // 1-2年級
 const SUBJECTS_MID  = ['國語','數學','英語','自然','社會','體育','藝術']; // 3-4年級
