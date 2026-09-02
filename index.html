@@ -945,14 +945,18 @@
 
     <!-- 1-6年級校本課程規劃 -->
     <div class="panel" style="margin-top:20px">
-      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
-        <span class="panel-title">📚 114下・1–6年級 SEL 校本課程規劃</span>
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span class="panel-title">📚 1–6年級 SEL 校本課程規劃</span>
         <a href="https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy" target="_blank"
            style="font-size:12px;color:#3b82f6;text-decoration:none;padding:3px 10px;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff">
           📂 Drive 教案資料夾
         </a>
       </div>
-      <div class="panel-body" id="selCurriculumTable"></div>
+      <div class="panel-body" style="padding-top:0">
+        <div class="meeting-year-tabs" id="selPlanYearTabs" style="margin-top:12px"></div>
+        <div class="meeting-sem-tabs" id="selPlanSemTabs" style="margin-bottom:10px"></div>
+        <div id="selCurriculumTable"></div>
+      </div>
     </div>
   </section>
 
@@ -1008,15 +1012,18 @@
 
     <!-- 學年度 tabs -->
     <div class="meeting-year-tabs" id="meetingYearTabs">
-      <button class="meeting-tab active" onclick="switchMeetingYear('114',this)">114學年度</button>
-      <button class="meeting-tab" onclick="switchMeetingYear('113',this)">113學年度</button>
-      <button class="meeting-tab" onclick="switchMeetingYear('112',this)">112學年度</button>
+      <button class="meeting-tab" data-year="116" onclick="switchMeetingYear('116',this)">116學年度</button>
+      <button class="meeting-tab active" data-year="115" onclick="switchMeetingYear('115',this)">115學年度</button>
+      <button class="meeting-tab" data-year="114" onclick="switchMeetingYear('114',this)">114學年度</button>
+      <button class="meeting-tab" data-year="113" onclick="switchMeetingYear('113',this)">113學年度</button>
+      <button class="meeting-tab" data-year="112" onclick="switchMeetingYear('112',this)">112學年度</button>
+      <button class="meeting-tab" style="opacity:.7" onclick="addMeetingYear()" title="手動新增學年度">＋ 新增學年度</button>
     </div>
 
     <!-- 學期 tabs -->
     <div class="meeting-sem-tabs" id="meetingSemTabs">
-      <button class="meeting-sem-tab" onclick="switchMeetingSem('上學期',this)">上學期</button>
-      <button class="meeting-sem-tab active" onclick="switchMeetingSem('下學期',this)">下學期</button>
+      <button class="meeting-sem-tab active" onclick="switchMeetingSem('上學期',this)">上學期</button>
+      <button class="meeting-sem-tab" onclick="switchMeetingSem('下學期',this)">下學期</button>
     </div>
 
     <!-- 檔案列表 -->
@@ -3334,46 +3341,106 @@ function _currentSemesterRange() {
   }
 }
 
+const SEL_PLAN_DOMAINS = [
+  {label:'自我覺察',  color:'#534AB7',bg:'#EEEDFE'},
+  {label:'自我管理',  color:'#0F6E56',bg:'#E1F5EE'},
+  {label:'社會覺察',  color:'#185FA5',bg:'#E6F1FB'},
+  {label:'關係技巧',  color:'#854F0B',bg:'#FAEEDA'},
+  {label:'負責任的決定',color:'#993C1D',bg:'#FAECE7'},
+];
+
+// 依學年度／學期存放各學期的課程規劃，尚未建立的學期不放資料即可（會自動顯示待填空白狀態）
+const SEL_PLAN_DATA = {
+  '114': {
+    '下學期': {
+      classes: [
+        {g:1,name:'1甲',teacher:'蔡幸華'},
+        {g:2,name:'2甲',teacher:'楊凱棋'},
+        {g:3,name:'3甲',teacher:'黃于玲'},
+        {g:4,name:'4甲',teacher:'王瑞明'},
+        {g:5,name:'5甲',teacher:'王怡文'},
+        {g:6,name:'6甲',teacher:'吳惠雅'},
+      ],
+      examBanner: {beforeIndex:4, text:'── 期中考週（3/30–4/11）暫停 SEL ──'},
+      // c: [[lesson,done],...] done=1=有省思記錄 done=0=待填/連結
+      rows: [
+        {wk:'週1', dates:'3/2–3/7',   ws:'2026-03-02',di:0,
+         c:[['認識生氣與情緒管理',1],['情緒六精靈',1],['我腦中的其他想法',1],['察覺過去難→現在容易',1],['優點大搜索',1],['呼吸覺察・身體放鬆',1]]},
+        {wk:'週2', dates:'3/9–3/13',  ws:'2026-03-09',di:0,
+         c:[['情緒六精靈',1],['憤怒量表',1],['這就是我',1],['察覺情緒/壓力',1],['別人眼中的我・言語的力量',1],['我的情緒環',1]]},
+        {wk:'週3', dates:'3/16–3/20', ws:'2026-03-16',di:1,
+         c:[['感受紅綠燈',1],['河豚帕菲',1],['情緒在大腦旅行',1],['情緒調節運動',1],['愛分享的蝴蝶',1],['情緒寶盒製作',1]]},
+        {wk:'週4', dates:'3/23–3/27', ws:'2026-03-23',di:1,
+         c:[['毛毛蟲慢慢走',1],['節節進步',1],['與憤怒對話',1],['情緒在大腦旅行',1],['情緒紅綠燈・蘇珊大嬸',1],['畢旅前的自我管理',1]]},
+        {wk:'週5', dates:'4/13–4/17', ws:'2026-04-13',di:2,
+         c:[['不同的劇本',1],['不同的劇本',1],['行程當中的衝突',1],['愛分享的蝴蝶',1],['失落的時刻',1],['社會覺察',0]]},
+        {wk:'週6', dates:'4/20–4/24', ws:'2026-04-20',di:2,
+         c:[['放大鏡視角',1],['不同的劇本（續）',1],['別人怎麼了？',1],['愛分享的蝴蝶（續）',1],['畢旅行程規劃',1],['',0]]},
+        {wk:'週7', dates:'4/27–5/1',  ws:'2026-04-27',di:3,
+         c:[['',0],['練習創造雙贏',1],['打氣三部曲',1],['角度不同看法也不同',1],['',0],['',0]]},
+        {wk:'週8', dates:'5/4–5/8',   ws:'2026-05-04',di:3,
+         c:[['',0],['',0],['練習創造雙贏',1],['',0],['',0],['',0]]},
+        {wk:'週9', dates:'5/11–5/15', ws:'2026-05-11',di:4,
+         c:[['',0],['',0],['我這週的目標',0],['',0],['',0],['',0]]},
+        {wk:'週10',dates:'5/18–5/22', ws:'2026-05-18',di:4,
+         c:[['',0],['',0],['我會負責任',0],['',0],['',0],['',0]]},
+      ]
+    }
+  }
+};
+
+// 目前顯示的學年度／學期，預設對齊儀表板自動計算出的目前學期
+let _selPlanYear = String(SCHOOL_YEAR);
+let _selPlanSem  = SEMESTER + '學期';
+
+function _selPlanYearList() {
+  const years = new Set(Object.keys(SEL_PLAN_DATA).map(Number));
+  years.add(SCHOOL_YEAR); years.add(SCHOOL_YEAR - 1); years.add(SCHOOL_YEAR + 1);
+  return [...years].sort((a,b)=>b-a).map(String);
+}
+function renderSelPlanTabs() {
+  const yearTabs = document.getElementById('selPlanYearTabs');
+  const semTabs  = document.getElementById('selPlanSemTabs');
+  if (!yearTabs || !semTabs) return;
+  yearTabs.innerHTML = _selPlanYearList().map(y =>
+    `<button class="meeting-tab${y===_selPlanYear?' active':''}" onclick="switchSelPlanYear('${y}',this)">${y}學年度</button>`
+  ).join('');
+  semTabs.innerHTML = ['上學期','下學期'].map(s =>
+    `<button class="meeting-sem-tab${s===_selPlanSem?' active':''}" onclick="switchSelPlanSem('${s}',this)">${s}</button>`
+  ).join('');
+}
+function switchSelPlanYear(year, el) {
+  _selPlanYear = year;
+  document.querySelectorAll('#selPlanYearTabs .meeting-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderSelCurriculumTable();
+}
+function switchSelPlanSem(sem, el) {
+  _selPlanSem = sem;
+  document.querySelectorAll('#selPlanSemTabs .meeting-sem-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderSelCurriculumTable();
+}
+
 function renderSelCurriculumTable() {
-  const nowStr = today.toISOString().slice(0,10);
-  const domains = [
-    {label:'自我覺察',  color:'#534AB7',bg:'#EEEDFE'},
-    {label:'自我管理',  color:'#0F6E56',bg:'#E1F5EE'},
-    {label:'社會覺察',  color:'#185FA5',bg:'#E6F1FB'},
-    {label:'關係技巧',  color:'#854F0B',bg:'#FAEEDA'},
-    {label:'負責任的決定',color:'#993C1D',bg:'#FAECE7'},
-  ];
-  const classes = [
-    {g:1,name:'1甲',teacher:'蔡幸華'},
-    {g:2,name:'2甲',teacher:'楊凱棋'},
-    {g:3,name:'3甲',teacher:'黃于玲'},
-    {g:4,name:'4甲',teacher:'王瑞明'},
-    {g:5,name:'5甲',teacher:'王怡文'},
-    {g:6,name:'6甲',teacher:'吳惠雅'},
-  ];
-  // c: [[lesson,done],...] done=1=有省思記錄 done=0=待填/連結
-  const rows = [
-    {wk:'週1', dates:'3/2–3/7',   ws:'2026-03-02',di:0,
-     c:[['認識生氣與情緒管理',1],['情緒六精靈',1],['我腦中的其他想法',1],['察覺過去難→現在容易',1],['優點大搜索',1],['呼吸覺察・身體放鬆',1]]},
-    {wk:'週2', dates:'3/9–3/13',  ws:'2026-03-09',di:0,
-     c:[['情緒六精靈',1],['憤怒量表',1],['這就是我',1],['察覺情緒/壓力',1],['別人眼中的我・言語的力量',1],['我的情緒環',1]]},
-    {wk:'週3', dates:'3/16–3/20', ws:'2026-03-16',di:1,
-     c:[['感受紅綠燈',1],['河豚帕菲',1],['情緒在大腦旅行',1],['情緒調節運動',1],['愛分享的蝴蝶',1],['情緒寶盒製作',1]]},
-    {wk:'週4', dates:'3/23–3/27', ws:'2026-03-23',di:1,
-     c:[['毛毛蟲慢慢走',1],['節節進步',1],['與憤怒對話',1],['情緒在大腦旅行',1],['情緒紅綠燈・蘇珊大嬸',1],['畢旅前的自我管理',1]]},
-    {wk:'週5', dates:'4/13–4/17', ws:'2026-04-13',di:2,
-     c:[['不同的劇本',1],['不同的劇本',1],['行程當中的衝突',1],['愛分享的蝴蝶',1],['失落的時刻',1],['社會覺察',0]]},
-    {wk:'週6', dates:'4/20–4/24', ws:'2026-04-20',di:2,
-     c:[['放大鏡視角',1],['不同的劇本（續）',1],['別人怎麼了？',1],['愛分享的蝴蝶（續）',1],['畢旅行程規劃',1],['',0]]},
-    {wk:'週7', dates:'4/27–5/1',  ws:'2026-04-27',di:3,
-     c:[['',0],['練習創造雙贏',1],['打氣三部曲',1],['角度不同看法也不同',1],['',0],['',0]]},
-    {wk:'週8', dates:'5/4–5/8',   ws:'2026-05-04',di:3,
-     c:[['',0],['',0],['練習創造雙贏',1],['',0],['',0],['',0]]},
-    {wk:'週9', dates:'5/11–5/15', ws:'2026-05-11',di:4,
-     c:[['',0],['',0],['我這週的目標',0],['',0],['',0],['',0]]},
-    {wk:'週10',dates:'5/18–5/22', ws:'2026-05-18',di:4,
-     c:[['',0],['',0],['我會負責任',0],['',0],['',0],['',0]]},
-  ];
+  renderSelPlanTabs();
+  const container = document.getElementById('selCurriculumTable');
+  const data = SEL_PLAN_DATA[_selPlanYear] && SEL_PLAN_DATA[_selPlanYear][_selPlanSem];
+
+  if (!data || !data.rows || !data.rows.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:30px 10px">
+      <div class="icon">📚</div>
+      <div>${_selPlanYear}學年度${_selPlanSem}尚未建立 SEL 校本課程規劃</div>
+      <a href="https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy" target="_blank" class="btn btn-outline btn-sm" style="margin-top:10px;text-decoration:none;display:inline-block">📂 前往 Drive 教案資料夾建立</a>
+    </div>`;
+    return;
+  }
+
+  const nowStr  = today.toISOString().slice(0,10);
+  const classes = data.classes;
+  const rows    = data.rows;
+  const semRange = getSemesterRange(Number(_selPlanYear), _selPlanSem==='上學期'?'上':'下');
+  const semEndStr = semRange.end.toISOString().slice(0,10);
 
   let html = `<div style="overflow-x:auto">
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:#64748b;align-items:center">
@@ -3393,9 +3460,9 @@ function renderSelCurriculumTable() {
     <tbody>`;
 
   rows.forEach((row,ri) => {
-    if (ri===4) html += `<tr><td colspan="9" style="padding:5px 10px;border:1px solid #e2e8f0;background:#faf5ff;font-size:11px;color:#7e22ce;text-align:center;font-style:italic">── 期中考週（3/30–4/11）暫停 SEL ──</td></tr>`;
-    const dom = domains[row.di];
-    const nextWs = rows[ri+1]?.ws || '2026-06-30';
+    if (data.examBanner && ri===data.examBanner.beforeIndex) html += `<tr><td colspan="${3+classes.length}" style="padding:5px 10px;border:1px solid #e2e8f0;background:#faf5ff;font-size:11px;color:#7e22ce;text-align:center;font-style:italic">${data.examBanner.text}</td></tr>`;
+    const dom = SEL_PLAN_DOMAINS[row.di];
+    const nextWs = rows[ri+1]?.ws || semEndStr;
     const isCurrent = nowStr >= row.ws && nowStr < nextWs;
     const isPast = row.ws < nowStr && !isCurrent;
     const rowBg = isCurrent ? '#fffbeb' : (isPast ? '#ffffff' : '#f9fafb');
@@ -3422,7 +3489,7 @@ function renderSelCurriculumTable() {
   html += `</tbody></table>
   <div style="margin-top:6px;font-size:11px;color:#94a3b8">完整省思記錄請至各班 Google 表單查看・資料來源：Google Drive SEL校本教案資料夾</div>
   </div>`;
-  document.getElementById('selCurriculumTable').innerHTML = html;
+  container.innerHTML = html;
 }
 
 function openSelModal() {
@@ -4526,6 +4593,8 @@ function escHtml(s) {
 }
 
 const MEETING_FOLDERS = {
+  '116': { '上學期': {}, '下學期': {} },
+  '115': { '上學期': {}, '下學期': {} },
   '114': {
     '上學期': {
       '📋 校務會議': '1Kks4LjnNH7B84nu205Az4mZDhNR5d93M',
@@ -4554,9 +4623,64 @@ const MEETING_EXTRA = {
     webViewLink: 'https://drive.google.com/file/d/1xSPU9IdN_3nBDLE9yi1UFF-NPq28Ql3n/view', modifiedTime: '2025-01-20' }] }
 };
 
-let _meetingYear  = '114';
-let _meetingSem   = '下學期';
+let _meetingYear  = '115';
+let _meetingSem   = '上學期';
 let _meetingCache = {}; // folderId → files[]
+
+// ── 手動新增學年度／資料夾（存於瀏覽器 localStorage，不需改程式碼）──
+const MEETING_EXTRA_KEY = 'ck_meeting_extra_folders';
+function _loadMeetingExtra() {
+  try { return JSON.parse(localStorage.getItem(MEETING_EXTRA_KEY)) || {}; }
+  catch { return {}; }
+}
+function _saveMeetingExtra(extra) {
+  localStorage.setItem(MEETING_EXTRA_KEY, JSON.stringify(extra));
+}
+function getMeetingFolders() {
+  const extra  = _loadMeetingExtra();
+  const merged = {};
+  for (const y of new Set([...Object.keys(MEETING_FOLDERS), ...Object.keys(extra)])) {
+    merged[y] = {
+      '上學期': { ...(MEETING_FOLDERS[y]?.['上學期']), ...(extra[y]?.['上學期']) },
+      '下學期': { ...(MEETING_FOLDERS[y]?.['下學期']), ...(extra[y]?.['下學期']) },
+    };
+  }
+  return merged;
+}
+function addMeetingYear() {
+  const year = prompt('請輸入要新增的學年度（例如：117）：');
+  if (!year || !/^\d{3}$/.test(year.trim())) { if (year) alert('請輸入 3 碼學年度數字，例如 117'); return; }
+  const y = year.trim();
+  if (document.querySelector(`#meetingYearTabs .meeting-tab[data-year="${y}"]`)) {
+    alert(`${y}學年度已存在`); return;
+  }
+  const extra = _loadMeetingExtra();
+  if (!extra[y]) extra[y] = { '上學期': {}, '下學期': {} };
+  _saveMeetingExtra(extra);
+
+  const btn = document.createElement('button');
+  btn.className = 'meeting-tab';
+  btn.dataset.year = y;
+  btn.textContent = `${y}學年度`;
+  btn.onclick = () => switchMeetingYear(y, btn);
+  const addBtn = document.querySelector('#meetingYearTabs .meeting-tab:last-child');
+  document.getElementById('meetingYearTabs').insertBefore(btn, addBtn);
+  switchMeetingYear(y, btn);
+}
+function addMeetingFolder() {
+  const typeName = prompt('資料夾名稱（例如：📋 校務會議 或 📅 每週夕會）：');
+  if (!typeName) return;
+  const raw = prompt('Google Drive 資料夾 ID 或分享連結：');
+  if (!raw) return;
+  const m = raw.match(/[-\w]{25,}/);
+  const folderId = m ? m[0] : raw.trim();
+  const extra = _loadMeetingExtra();
+  if (!extra[_meetingYear]) extra[_meetingYear] = { '上學期': {}, '下學期': {} };
+  if (!extra[_meetingYear][_meetingSem]) extra[_meetingYear][_meetingSem] = {};
+  extra[_meetingYear][_meetingSem][typeName] = folderId;
+  _saveMeetingExtra(extra);
+  renderMeetingContent();
+}
 
 function switchMeetingYear(year, el) {
   _meetingYear = year;
@@ -4586,11 +4710,13 @@ async function renderMeetingContent() {
   }
   if (authNotice) authNotice.style.display = 'none';
 
-  const yearData = MEETING_FOLDERS[_meetingYear];
+  const yearData = getMeetingFolders()[_meetingYear];
   const semData  = yearData && yearData[_meetingSem];
 
+  const addBtnHtml = `<button class="btn btn-outline btn-sm" onclick="addMeetingFolder()" style="margin-top:10px">➕ 手動新增資料夾</button>`;
+
   if (!semData || Object.keys(semData).length === 0) {
-    content.innerHTML = `<div class="empty-state"><div class="icon">📂</div><div>此學期尚無建立資料夾</div></div>`;
+    content.innerHTML = `<div class="empty-state"><div class="icon">📂</div><div>此學期尚無建立資料夾</div>${addBtnHtml}</div>`;
     return;
   }
 
@@ -4607,6 +4733,7 @@ async function renderMeetingContent() {
       <div class="meeting-file-grid">${cards}</div>
     </div>`;
   }
+  html += `<div style="margin-top:6px">${addBtnHtml}</div>`;
   content.innerHTML = html || '<div class="empty-state"><div class="icon">📂</div><div>沒有找到檔案</div></div>';
 }
 
