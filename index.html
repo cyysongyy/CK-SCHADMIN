@@ -784,7 +784,7 @@
             <li><a href="https://drive.google.com/drive/folders/1qkkCAOfK9ttR2vgOpKGc31WQZlQAZFTs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 週一晨會SEL</a></li>
             <li><a href="https://drive.google.com/drive/folders/1hYuYujLB_ZwbAJNTnr4xpEFK_n06oRzZ" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-check in&amp;out-科任</a></li>
             <li><a href="https://drive.google.com/drive/folders/1S74S0YUbTuI1cPbNNIO6WWdOoDMGDvy_" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-線上遊戲</a></li>
-            <li><a href="https://drive.google.com/drive/folders/1iUmSMlT2BhP0sj4AkvCN4t4gIiymAtHR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 圍圈</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1TlM6bD_PDcFmkKuirRJxX1hK2hVlb2_E" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 圍圈</a></li>
             <li><a href="https://drive.google.com/drive/folders/1Gfd-ufURJt3ZC9bur4sIqLRJOgH0CZDw" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL各種資源</a></li>
             <li><a href="https://drive.google.com/drive/folders/1xwWBVzbxm2ZDbrRFR_birOSg0_vEY4IR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 雙語SEL-英師</a></li>
             <li><a href="https://drive.google.com/drive/folders/1h5JQikvVKfXF-jrmQUZG43xwEDE6fTxs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 教室佈置</a></li>
@@ -3138,22 +3138,24 @@ const SEL_DOMAIN_COLORS = {
 };
 const SEL_STATUS_BADGE = {已完成:'badge-green',進行中:'badge-blue',已報名:'badge-yellow',規劃中:'badge-gray'};
 
-// ── 圍圈輪值表資料（114下學期，週四 3:00~3:20）
+// ── 圍圈輪值表資料（115上學期，週四 3:00~3:20，來源：115學年度上學期週四下午品格SEL圍圈輪值表-分組版-1150831）
 const SEL_ROTATION = [
-  { week:2,  date:'2026/3/5',  theme:'堅毅', A:'黃于玲', B:'林瑞芳' },
-  { week:3,  date:'2026/3/12', theme:'感恩', A:'張曉鈴', B:'王瑞明' },
-  { week:4,  date:'2026/3/19', theme:'感恩', A:'王怡文', B:'楊凱棋' },
-  { week:5,  date:'2026/3/26', theme:'熱情', A:'陳永芝', B:'吳惠雅' },
-  { week:6,  date:'2026/4/2',  theme:'熱情', A:'黃雅玲', B:'陳英曉' },
-  { week:7,  date:'2026/4/9',  theme:'自制', A:'蔡幸華', B:'張曉鈴' },
-  { week:8,  date:'2026/4/16', theme:'自制', A:'黃于玲', B:'王瑞明' },
-  { week:10, date:'2026/4/30', theme:'堅毅', A:'林瑞芳', B:'楊凱棋' },
-  { week:11, date:'2026/5/7',  theme:'堅毅', A:'王怡文', B:'吳惠雅' },
-  { week:12, date:'2026/5/14', theme:'感恩', A:'陳英曉', B:'陳永芝' },
-  { week:13, date:'2026/5/21', theme:'感恩', A:'蔡幸華', B:'黃雅玲' },
-  { week:14, date:'2026/5/28', theme:'熱情', A:'黃于玲', B:'林瑞芳' },
-  { week:15, date:'2026/6/4',  theme:'熱情', A:'張曉鈴', B:'王瑞明' },
-  { week:16, date:'2026/6/11', theme:'自制', A:'王怡文', B:'楊凱棋' },
+  { week:2,  date:'2026/9/10',  theme:'堅毅', A:'陳永芝', B:'吳惠雅' },
+  { week:3,  date:'2026/9/17',  theme:'堅毅', A:'黃雅玲', B:'蔡幸華' },
+  { week:4,  date:'2026/9/24',  theme:'感恩', A:'林瑞芳', B:'陳英曉' },
+  { week:5,  date:'2026/10/1',  theme:'感恩', A:'楊凱棋', B:'黃于玲' },
+  { week:6,  date:'2026/10/8',  theme:'熱情', A:'王瑞明', B:'王怡文' },
+  { week:7,  date:'2026/10/15', theme:'熱情', A:'羅昭倫', B:'陳永芝' },
+  { week:8,  date:'2026/10/22', theme:'自制', A:'吳惠雅', B:'黃雅玲' },
+  { week:9,  date:'2026/10/29', theme:'自制', A:'蔡幸華', B:'林瑞芳' },
+  { week:11, date:'2026/11/12', theme:'堅毅', A:'陳英曉', B:'楊凱棋' },
+  { week:13, date:'2026/11/26', theme:'堅毅', A:'黃于玲', B:'王瑞明' },
+  { week:14, date:'2026/12/3',  theme:'感恩', A:'王怡文', B:'羅昭倫' },
+  { week:15, date:'2026/12/10', theme:'感恩', A:'陳永芝', B:'吳惠雅' },
+  { week:16, date:'2026/12/17', theme:'熱情', A:'黃雅玲', B:'蔡幸華' },
+  { week:17, date:'2026/12/24', theme:'熱情', A:'林瑞芳', B:'陳英曉' },
+  { week:18, date:'2026/12/31', theme:'自制', A:'楊凱棋', B:'黃于玲' },
+  { week:19, date:'2027/1/7',   theme:'自制', A:'王瑞明', B:'王怡文' },
 ];
 
 const SEL_THEME_COLOR = {
@@ -3165,19 +3167,38 @@ const SEL_THEME_COLOR = {
 
 let _selRotPage = 0; // 翻頁狀態：0 = 本週起第一組，1 = 下一組
 
+// 學期尚未建立正式輪值名單時，依「時間與週次」自動預排本學期每週四（僅日期/週次，人員待補）
+function _semesterRotationPlaceholder() {
+  const list = [];
+  const d = new Date(SEM_START);
+  while (d.getDay() !== 4) d.setDate(d.getDate() + 1); // 找學期內第一個週四
+  let wk = Math.floor((d - SEM_START) / 604800000) + 1;
+  while (d <= SEM_END) {
+    list.push({ week: wk, date: `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`, theme: '待排定', A: '待排定', B: '待排定' });
+    d.setDate(d.getDate() + 7);
+    wk++;
+  }
+  return list;
+}
+const _ROTATION_PLACEHOLDER_NOTE = `📅 ${SEM_LABEL}學期尚未建立正式輪值名單，以下依時間與週次預排，請至 <a href="https://drive.google.com/drive/folders/1TlM6bD_PDcFmkKuirRJxX1hK2hVlb2_E" target="_blank" style="color:#3b82f6">Drive 圍圈資料夾</a> 建立`;
+
 function renderDashRotation() {
   const el = document.getElementById('dashRotationGrid');
   if (!el) return;
   const today = new Date(); today.setHours(0,0,0,0);
-  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
+  const inSem = SEL_ROTATION.filter(r => { const d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
+  const usingPlaceholder = !inSem.length;
+  const source = usingPlaceholder ? _semesterRotationPlaceholder() : inSem;
+  let baseIdx = source.findIndex(r => new Date(r.date) >= today);
   if (baseIdx < 0) {
     el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:14px;padding:20px 0;grid-column:1/-1">🎉 本學期週四品格圍圈輪值已結束</div>';
     return;
   }
   baseIdx = Math.max(0, baseIdx);
-  const rows = SEL_ROTATION.slice(baseIdx, baseIdx + 3);
+  const rows = source.slice(baseIdx, baseIdx + 3);
   const weekLabels = ['本週', '下週', '再下週'];
-  el.innerHTML = rows.map((r, i) => {
+  const banner = usingPlaceholder ? `<div style="grid-column:1/-1;font-size:12px;color:#94a3b8;margin-bottom:2px">${_ROTATION_PLACEHOLDER_NOTE}</div>` : '';
+  el.innerHTML = banner + rows.map((r, i) => {
     const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
     return `
     <div style="border:2px solid ${c.border};border-radius:12px;padding:16px;background:${c.bg};position:relative">
@@ -3206,9 +3227,13 @@ function renderSelRotation() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
+  const inSem = SEL_ROTATION.filter(r => { const d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
+  const usingPlaceholder = !inSem.length;
+  const source = usingPlaceholder ? _semesterRotationPlaceholder() : inSem;
+
   // 找到「本週或最近下一週」的起始索引（以今天為基準，固定起點）
-  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
-  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
+  let baseIdx = source.findIndex(r => new Date(r.date) >= today);
+  if (baseIdx < 0) baseIdx = source.length - 3;
   baseIdx = Math.max(0, baseIdx);
 
   // 每次顯示 3 週，最多往後涵蓋 5 週（0~4）
@@ -3218,14 +3243,15 @@ function renderSelRotation() {
   _selRotPage = Math.max(0, Math.min(_selRotPage, maxPage));
 
   const sliceStart = baseIdx + _selRotPage * pageSize;
-  const sliceEnd = Math.min(sliceStart + pageSize, baseIdx + windowSize, SEL_ROTATION.length);
-  const rows = SEL_ROTATION.slice(sliceStart, sliceEnd);
+  const sliceEnd = Math.min(sliceStart + pageSize, baseIdx + windowSize, source.length);
+  const rows = source.slice(sliceStart, sliceEnd);
 
   // 計算本組標籤（第幾週相對於 baseIdx）
   const offsetBase = _selRotPage * pageSize; // 0, 3, 6…
   const weekLabels = ['本週', '下週', '再下週', '第4週', '第5週'];
 
-  el.innerHTML = rows.map((r, i) => {
+  const banner = usingPlaceholder ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">${_ROTATION_PLACEHOLDER_NOTE}</div>` : '';
+  el.innerHTML = banner + rows.map((r, i) => {
     const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
     const globalOffset = offsetBase + i;
     const isNow = globalOffset === 0;
@@ -3252,7 +3278,7 @@ function renderSelRotation() {
   // 更新翻頁按鈕
   if (navEl) {
     const hasPrev = _selRotPage > 0;
-    const hasNext = _selRotPage < maxPage && sliceEnd < baseIdx + windowSize && sliceEnd < SEL_ROTATION.length;
+    const hasNext = _selRotPage < maxPage && sliceEnd < baseIdx + windowSize && sliceEnd < source.length;
     navEl.innerHTML = `
       <button onclick="_selRotPage--;renderSelRotation()" style="padding:4px 14px;border-radius:8px;border:1px solid #cbd5e1;background:${hasPrev?'#fff':'#f1f5f9'};color:${hasPrev?'#1e293b':'#94a3b8'};cursor:${hasPrev?'pointer':'default'};font-size:13px" ${hasPrev?'':'disabled'}>← 上一組</button>
       <span style="font-size:12px;color:#94a3b8">第 ${_selRotPage+1} / ${maxPage+1} 組</span>
@@ -4997,7 +5023,15 @@ async function getMeetingFiles(folderId) {
      ============================================================ -->
 <script>
 (function(){
-  function getData(){ try{ return SEL_ROTATION; }catch(e){ return (window.SEL_ROTATION||[]); } }
+  function getData(){
+    try{
+      var all = SEL_ROTATION || [];
+      var inSem = all.filter(function(r){ var d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
+      if (inSem.length) return { rows: inSem, placeholder: false };
+      var ph = (typeof _semesterRotationPlaceholder === 'function') ? _semesterRotationPlaceholder() : [];
+      return { rows: ph, placeholder: true };
+    }catch(e){ return { rows: (window.SEL_ROTATION||[]), placeholder: false }; }
+  }
   function card(r, kind){
     var p=String(r.date).split('/'), m=p[1], d=p[2];
     var isNow=kind==='now';
@@ -5018,7 +5052,8 @@ async function getMeetingFiles(folderId) {
     var nav=document.getElementById('selRotationNav');
     if(nav) nav.innerHTML='';
     if(!grid) return;
-    var data=getData()||[];
+    var got=getData();
+    var data=got.rows||[];
     var msg=function(t){ return '<div style="text-align:center;color:#94a3b8;font-size:14px;padding:20px 0;grid-column:1/-1">'+t+'</div>'; };
     if(!data.length){ grid.innerHTML=msg('尚無輪值資料'); return; }
     var now=new Date(); now.setHours(0,0,0,0);
@@ -5031,10 +5066,11 @@ async function getMeetingFiles(folderId) {
       if(!firstD||dt<firstD)firstD=dt; if(!lastD||dt>lastD)lastD=dt;
       var w=wk(dt); if(w===0)cur=r; else if(w===1)nxt=r;
     });
-    var html='';
+    var html=got.placeholder && typeof _ROTATION_PLACEHOLDER_NOTE!=='undefined'
+      ? '<div style="grid-column:1/-1;font-size:12px;color:#94a3b8;margin-bottom:2px">'+_ROTATION_PLACEHOLDER_NOTE+'</div>' : '';
     if(cur) html+=card(cur,'now');
     if(nxt) html+=card(nxt,'next');
-    if(!html){
+    if(!cur && !nxt){
       if(lastD&&now>lastD) html=msg('🎉 本學期週四品格圍圈輪值已結束');
       else if(firstD&&now<firstD) html=msg('📅 本學期輪值尚未開始');
       else html=msg('📌 本週與下週無品格圍圈輪值安排');
