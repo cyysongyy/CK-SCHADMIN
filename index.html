@@ -3414,6 +3414,21 @@ const SEL_PLAN_DOMAINS = [
 
 // 依學年度／學期存放各學期的課程規劃，尚未建立的學期不放資料即可（會自動顯示待填空白狀態）
 const SEL_PLAN_DATA = {
+  '115': {
+    '上學期': {
+      // 115上學期各班導師（與114下相比，1-2、3-4、5-6年級導師互調）
+      classes: [
+        {g:1,name:'1甲',teacher:'楊凱棋'},
+        {g:2,name:'2甲',teacher:'蔡幸華'},
+        {g:3,name:'3甲',teacher:'王瑞明'},
+        {g:4,name:'4甲',teacher:'黃于玲'},
+        {g:5,name:'5甲',teacher:'吳惠雅'},
+        {g:6,name:'6甲',teacher:'王怡文'},
+      ],
+      // 115上學期教案尚未上傳（Drive 教案資料夾各班均為空），待建立後於此補上 rows
+      rows: [],
+    },
+  },
   '114': {
     '下學期': {
       classes: [
@@ -3491,9 +3506,15 @@ function renderSelCurriculumTable() {
   const data = SEL_PLAN_DATA[_selPlanYear] && SEL_PLAN_DATA[_selPlanYear][_selPlanSem];
 
   if (!data || !data.rows || !data.rows.length) {
+    const classList = data && data.classes && data.classes.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px">${
+          data.classes.map(c => `<span class="badge" style="background:#f1f5f9;color:#475569">${c.name} ${c.teacher}</span>`).join('')
+        }</div>`
+      : '';
     container.innerHTML = `<div class="empty-state" style="padding:30px 10px">
       <div class="icon">📚</div>
       <div>${_selPlanYear}學年度${_selPlanSem}尚未建立 SEL 校本課程規劃</div>
+      ${classList}
       <a href="https://drive.google.com/drive/folders/1G6DqtLiE9vW8ofGiDOSTs2Vu4acrg8We" target="_blank" class="btn btn-outline btn-sm" style="margin-top:10px;text-decoration:none;display:inline-block">📂 前往 Drive 教案資料夾建立</a>
     </div>`;
     return;
