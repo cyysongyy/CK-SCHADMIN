@@ -858,8 +858,8 @@
     <!-- 行事曆週次總表 -->
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">📅 114學年度第一學期行事曆週次總覽</span>
-        <a href="https://drive.google.com/file/d/11O-6yxeNZF-FNa5poOuhuQIYR45DNBTq/view" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">📄 原始檔案</a>
+        <span class="panel-title">📅 <span id="calWeeklyTitle">行事曆週次總覽</span></span>
+        <a href="https://docs.google.com/document/d/1iMBscmtH4LoJupaIwGE9s8rPz_KaLV1J/edit?usp=sharing" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">📄 原始檔案</a>
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -1605,6 +1605,9 @@ function getSemesterRange(year, sem) {
 const _semRange = getSemesterRange(SCHOOL_YEAR, SEMESTER);
 const SEM_START = _semRange.start;
 const SEM_END   = _semRange.end;
+// 學校行事曆「第1週」起始日（依115上學期行事曆：第1週 = 8/30~9/5）
+// ※換學期／學年度時，請依當學期行事曆的第1週起始日更新此常數
+const SEM_WEEK1_START = new Date('2026-08-30');
 
 // ═══════════════════════════════════════════════════════════════
 //  DATA STORE (in-memory)
@@ -1715,6 +1718,23 @@ let events = [
   {id:87,  name:'輔導團專業對話',               date:'2026-06-12', type:'行政', src:'gcal-personal', desc:'輔導團專業對話'},
   {id:88,  name:'雲菁計畫第二梯次｜結業式',      date:'2026-07-02', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 結業式 09:00-14:00（線上 Meet）'},
   {id:89,  name:'TFT明日學校 辰光梯次（起）',    date:'2026-07-20', type:'活動', src:'gcal-personal', desc:'TFT 2026 夏季明日學校 辰光梯次 07/20-07/29，地點：雲林辰光國小'},
+  // ── 115學年度上學期行事曆（來源：115學年度上學期-週次行事曆-縣府-學生版）──
+  {id:90,  name:'第一學期開學日',       date:'2026-08-31', type:'行政', desc:'115學年度第一學期開學日（星期一）'},
+  {id:91,  name:'中秋節連續假期',       date:'2026-09-25', type:'假日', desc:'9月25日至9月26日為中秋節連續假期'},
+  {id:92,  name:'教師節放假',           date:'2026-09-28', type:'假日', desc:'教師節放假1天'},
+  {id:93,  name:'期初親職座談暨班親會', date:'2026-09-19', type:'活動', desc:'9/19（六）親職座談會暨班親會'},
+  {id:94,  name:'雙十國慶日連續假期',   date:'2026-10-09', type:'假日', desc:'10月9日至10月10日為雙十國慶日連續假期'},
+  {id:95,  name:'光復節調整放假',       date:'2026-10-26', type:'假日', desc:'光復節調整放假1天'},
+  {id:96,  name:'期中評量（四五）',     date:'2026-11-05', type:'考試', desc:'115上各年級期中評量，第1天'},
+  {id:97,  name:'期中評量（四五）',     date:'2026-11-06', type:'考試', desc:'115上各年級期中評量，第2天'},
+  {id:98,  name:'水林烏克麗麗嘉年華會', date:'2026-11-01', type:'活動', desc:'水林全國烏克麗麗嘉年華會（週日）'},
+  {id:99,  name:'戶外教育-中埔竹夢森林', date:'2026-11-12', type:'活動', desc:'戶外教學：中埔竹夢森林'},
+  {id:100, name:'行憲紀念日連續假期',   date:'2026-12-25', type:'假日', desc:'12月25日至12月26日為行憲紀念日連續假期'},
+  {id:101, name:'社區健走暨動靜態成果展', date:'2026-12-25', type:'活動', desc:'暫定：社區健走暨創意變裝秀踩街、學生動靜態成果展'},
+  {id:102, name:'元旦連續假期',         date:'2027-01-01', type:'假日', desc:'1月1日至1月2日為元旦連續假期'},
+  {id:103, name:'期末評量（四五）',     date:'2027-01-14', type:'考試', desc:'115上各年級期末評量，第1天'},
+  {id:104, name:'期末評量（四五）',     date:'2027-01-15', type:'考試', desc:'115上各年級期末評量，第2天'},
+  {id:105, name:'休業式',               date:'2027-01-20', type:'行政', desc:'115學年度第一學期休業式，1月21日起寒假開始'},
 ];
 
 // SEL 校本課程資料已移至 renderSelCurriculumTable() 函式（來源：Drive 教案資料夾）
@@ -1916,7 +1936,7 @@ let selCourses = [
   {id:2,name:'情緒調節小達人',domain:'自我管理',gradeGroup:'低年級（1-2年級）',date:`${yy}-10-04`,sessions:4,teacher:'李老師',goal:'學習深呼吸、正向自我對話等調節策略',activity:'角色扮演、情境模擬',status:'已完成',note:''},
   {id:3,name:'同理心大冒險',domain:'社會覺察',gradeGroup:'中年級（3-4年級）',date:`${yy}-09-13`,sessions:4,teacher:'王老師',goal:'培養理解他人立場與感受的能力',activity:'觀點取替活動、小組討論',status:'已完成',note:''},
   {id:4,name:'團隊合作我最棒',domain:'人際技巧',gradeGroup:'中年級（3-4年級）',date:`${yy}-10-11`,sessions:4,teacher:'王老師',goal:'學習傾聽、協商與合作技巧',activity:'團隊任務、合作遊戲',status:'進行中',note:''},
-  {id:5,name:'理性思考做決定',domain:'負責任決策',gradeGroup:'高年級（5-6年級）',date:`${yy}-${mm}-14`,sessions:6,teacher:'張老師',goal:'培養分析情境、評估後果的決策能力',activity:'案例分析、辯論活動',status:'已報名',note:''},
+  {id:5,name:'理性思考做決定',domain:'負責任決策',gradeGroup:'高年級（5-6年級）',date:`${yy}-11-14`,sessions:6,teacher:'張老師',goal:'培養分析情境、評估後果的決策能力',activity:'案例分析、辯論活動',status:'已報名',note:''},
 ];
 
 let nextId = { events: 38, grades: 11, admin: 8, training: 6, sel: 6 };
@@ -3172,7 +3192,7 @@ function _semesterRotationPlaceholder() {
   const list = [];
   const d = new Date(SEM_START);
   while (d.getDay() !== 4) d.setDate(d.getDate() + 1); // 找學期內第一個週四
-  let wk = Math.floor((d - SEM_START) / 604800000) + 1;
+  let wk = Math.floor((d - SEM_WEEK1_START) / 604800000) + 1;
   while (d <= SEM_END) {
     list.push({ week: wk, date: `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`, theme: '待排定', A: '待排定', B: '待排定' });
     d.setDate(d.getDate() + 7);
@@ -4064,6 +4084,8 @@ const weeklyCalData = [
 function renderDrivePage() {
   const tbody = document.getElementById('calWeeklyBody');
   if(!tbody) return;
+  const titleEl = document.getElementById('calWeeklyTitle');
+  if (titleEl) titleEl.textContent = `${SCHOOL_YEAR}學年度第${SEMESTER==='上'?'一':'二'}學期行事曆週次總覽`;
   tbody.innerHTML = weeklyCalData.map(w=>`<tr>
     <td style="text-align:center;font-weight:700;min-width:36px">${w.wk==='0'?'假期':w.wk}</td>
     <td style="white-space:nowrap;font-size:12px;color:#64748b">${w.dates}</td>
@@ -4487,8 +4509,21 @@ async function loadMammoth() {
 
 // ── 自動載入最近兩週夕會摘要 ──────────────────────────────────
 // 每次開啟會議記錄頁 + 行事曆同步後自動執行
-// 目前學期資料夾：114下 / 每週夕會
-const RECENT_MTG_FOLDER = '1FAb8TBPYhbroQIigcUYjHqzasAX20sC6';
+// 資料夾依目前學年度／學期自動取用（MEETING_FOLDERS），不再寫死學期
+function _recentMtgFolder() {
+  const folders = getMeetingFolders();
+  const semData = folders[String(SCHOOL_YEAR)] && folders[String(SCHOOL_YEAR)][SEMESTER + '學期'];
+  return semData && semData['📅 每週夕會'];
+}
+
+// 檔名 "第N週-MMDD.docx" 的 MMDD → 依目前學期換算實際日期（上學期跨年：8-12月屬前一年，1月屬次一年）
+function _mmddToDate(mmdd) {
+  const mo = Math.floor(mmdd / 100), da = mmdd % 100;
+  const yr = mo >= 8 ? SCHOOL_YEAR + 1911 : SCHOOL_YEAR + 1912;
+  const d = new Date(yr, mo - 1, da);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 async function autoLoadRecentMeetings() {
   // 只在會議頁面可見時執行
@@ -4500,12 +4535,18 @@ async function autoLoadRecentMeetings() {
   const lastUl   = document.getElementById('rmtgLastPoints');
   if (!thisUl || !lastUl) return;
 
+  const folderId = _recentMtgFolder();
+  if (!folderId) {
+    thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#94a3b8">本學期尚未建立每週夕會資料夾</li>';
+    return;
+  }
+
   thisUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
   lastUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
 
   try {
     // 1. 取最近 10 筆 .docx，依修改時間排序
-    const q   = encodeURIComponent(`'${RECENT_MTG_FOLDER}' in parents and trashed=false`);
+    const q   = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     const url = `https://www.googleapis.com/drive/v3/files?q=${q}`
               + `&fields=files(id,name,mimeType,webViewLink,modifiedTime)`
               + `&orderBy=modifiedTime+desc&pageSize=10`;
@@ -4513,34 +4554,49 @@ async function autoLoadRecentMeetings() {
     const data = await res.json();
     if (data.error) { thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#ef4444">Drive 存取失敗</li>'; return; }
 
-    // 今天的 MMDD（例：5/14 → 514）
-    const _now   = new Date();
-    const todayMMDD = (_now.getMonth() + 1) * 100 + _now.getDate();
     // 從檔名 "第N週-MMDD.docx" 取出 MMDD（連字號後的4位數）
     const getMMDD = n => { const m = n.match(/[-_](\d{4})(?:\.docx)?/i); return m ? +m[1] : 0; };
 
-    // 只留 .docx，且 MMDD ≤ 今天（排除未來空白範本）
-    const docs = (data.files || [])
-      .filter(f => {
-        if (f.mimeType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return false;
-        const mmdd = getMMDD(f.name);
-        return mmdd > 0 && mmdd <= todayMMDD;
-      })
-      .sort((a, b) => getMMDD(b.name) - getMMDD(a.name)); // 最新在前
+    // 以右上方顯示的「今天」為準，換算本週（週日～週五）與上週的日期範圍
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const curSun = new Date(SEM_WEEK1_START);
+    curSun.setDate(curSun.getDate() + (weekNumberFromDate(today.toISOString()) - 1) * 7);
+    const curFri = new Date(curSun); curFri.setDate(curFri.getDate() + 5);
+    const lastSun = new Date(curSun); lastSun.setDate(lastSun.getDate() - 7);
+    const lastFri = new Date(curFri); lastFri.setDate(lastFri.getDate() - 7);
+    const inRange = (d, s, e) => d >= s && d <= e;
 
-    if (docs.length === 0) { thisUl.innerHTML = '<li style="color:#94a3b8">尚無 .docx 檔案</li>'; return; }
+    const docs = (data.files || [])
+      .filter(f => f.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+      .map(f => ({ ...f, _mmdd: getMMDD(f.name) }))
+      .filter(f => f._mmdd > 0)
+      .map(f => ({ ...f, _date: _mmddToDate(f._mmdd) }));
+
+    const thisWeekDoc = docs.find(f => inRange(f._date, curSun, curFri));
+    const lastWeekDoc = docs.find(f => inRange(f._date, lastSun, lastFri));
+
+    const emptyCard = (titleId, ulId, linkId, label) => {
+      document.getElementById(titleId).textContent = label;
+      document.getElementById(ulId).innerHTML = '<li style="color:#94a3b8">（尚未上傳本週紀錄）</li>';
+      const a = document.getElementById(linkId);
+      if (a) a.style.display = 'none';
+    };
 
     // 手機版：直接顯示連結，不解析（省頻寬）
     if (_IS_MOBILE) {
-      fillCardMobile(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
-      if (docs[1]) fillCardMobile(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
+      thisWeekDoc ? fillCardMobile(thisWeekDoc, 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink')
+                  : emptyCard('rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink', '本週');
+      lastWeekDoc ? fillCardMobile(lastWeekDoc, 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink')
+                  : emptyCard('rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink', '上週');
       return;
     }
 
     // 電腦版：載入 mammoth.js 並解析內容
     await loadMammoth();
-    await fillCardDesktop(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
-    if (docs[1]) await fillCardDesktop(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
+    thisWeekDoc ? await fillCardDesktop(thisWeekDoc, 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink')
+                : emptyCard('rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink', '本週');
+    lastWeekDoc ? await fillCardDesktop(lastWeekDoc, 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink')
+                : emptyCard('rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink', '上週');
 
   } catch (e) {
     console.warn('autoLoadRecentMeetings:', e);
@@ -4620,7 +4676,12 @@ function escHtml(s) {
 
 const MEETING_FOLDERS = {
   '116': { '上學期': {}, '下學期': {} },
-  '115': { '上學期': {}, '下學期': {} },
+  '115': {
+    '上學期': {
+      '📅 每週夕會': '1F9RPv-Sk9tGujcIOdQgqHP0VeXo-rh9Z',
+    },
+    '下學期': {}
+  },
   '114': {
     '上學期': {
       '📋 校務會議': '1Kks4LjnNH7B84nu205Az4mZDhNR5d93M',
@@ -4750,7 +4811,12 @@ async function renderMeetingContent() {
 
   let html = '';
   for (const [typeName, folderId] of Object.entries(semData)) {
-    const files = await getMeetingFiles(folderId);
+    let files = await getMeetingFiles(folderId);
+    // 依修改時間換算週次，按週次由新到舊排序，讓當週內容排在最前面
+    if (_meetingYear === String(SCHOOL_YEAR) && _meetingSem === (SEMESTER + '學期')) {
+      files = files.map(f => ({ ...f, _week: weekNumberFromDate(f.modifiedTime) }))
+                   .sort((a, b) => (b._week ?? -1) - (a._week ?? -1));
+    }
     const cards = files.length
       ? files.map(f => meetingFileCard(f)).join('')
       : '<div style="color:#94a3b8;font-size:13px;padding:8px 0">（尚無檔案）</div>';
@@ -4763,6 +4829,15 @@ async function renderMeetingContent() {
   content.innerHTML = html || '<div class="empty-state"><div class="icon">📂</div><div>沒有找到檔案</div></div>';
 }
 
+// 依日期換算屬於本學期第幾週（以 SEM_WEEK1_START 起算，每7天一週，與圍圈輪值表週次一致）
+function weekNumberFromDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (d < SEM_START || d > SEM_END) return null;
+  return Math.floor((d - SEM_WEEK1_START) / 604800000) + 1;
+}
+const _CURRENT_WEEK_NO = weekNumberFromDate(new Date().toISOString());
+
 function meetingFileCard(f) {
   const icon = f.mimeType === 'application/pdf' ? '📄'
     : f.mimeType.includes('presentation') ? '📊'
@@ -4773,10 +4848,15 @@ function meetingFileCard(f) {
   const date = f.modifiedTime
     ? new Date(f.modifiedTime).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
     : '';
-  return `<a class="meeting-file-card" href="${f.webViewLink}" target="_blank" title="${name}">
+  const wk = f._week !== undefined ? f._week : weekNumberFromDate(f.modifiedTime);
+  const isCurrentWeek = wk !== null && wk === _CURRENT_WEEK_NO;
+  const wkBadge = wk !== null
+    ? `<span style="background:${isCurrentWeek ? '#2563eb' : '#e2e8f0'};color:${isCurrentWeek ? '#fff' : '#475569'};font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px">第${wk}週${isCurrentWeek ? '・本週' : ''}</span>`
+    : '';
+  return `<a class="meeting-file-card" href="${f.webViewLink}" target="_blank" title="${name}"${isCurrentWeek ? ' style="border-color:#2563eb;box-shadow:0 0 0 1px #2563eb"' : ''}>
     <span class="meeting-file-icon">${icon}</span>
     <div>
-      <div class="meeting-file-name">${name}</div>
+      <div class="meeting-file-name">${name}${wkBadge}</div>
       <div class="meeting-file-meta">${ext}${date ? ' · 修改：' + date : ''}</div>
     </div>
   </a>`;
