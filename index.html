@@ -4140,6 +4140,19 @@ function syncGoogleCalendar() {
     return;
   }
 
+  if (_IS_MOBILE) {
+    // 手機：使用 redirect 流程（popup 在行動瀏覽器上受限）
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id:    GCAL_CLIENT_ID,
+      scope:        GCAL_SCOPE,
+      ux_mode:      'redirect',
+      redirect_uri: 'https://cyysongyy.github.io/CK-SCHADMIN/',
+      callback:     () => {} // redirect 模式不使用 callback
+    });
+    tokenClient.requestAccessToken({ prompt: 'select_account' });
+    return;
+  }
+
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GCAL_CLIENT_ID,
     scope:     GCAL_SCOPE,
@@ -4152,8 +4165,7 @@ function syncGoogleCalendar() {
       await fetchGCalEvents(resp.access_token);
     }
   });
-  // 手機明確點擊同步時強制顯示帳號選擇，避免靜默授權失敗；桌機靜默授權
-  tokenClient.requestAccessToken({ prompt: _IS_MOBILE ? 'select_account' : '' });
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 async function fetchGCalEvents(accessToken) {
@@ -4801,6 +4813,27 @@ document.addEventListener('DOMContentLoaded', ()=>{
     origSP(id, el);
     if(id==='duty') renderDutyTable();
   };
+
+  // ── 手機 OAuth redirect 流程：回到頁面後從 URL hash 取得 token ──
+  (function checkOAuthRedirect() {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token=')) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const token = params.get('access_token');
+    const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
+    if (!token) return;
+    // 儲存 token
+    _gToken = token;
+    _gTokenExpiry = Date.now() + (expiresIn - 60) * 1000;
+    // 清除 URL hash（避免重新整理重複使用過期 token）
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    // 跳到行事曆頁並自動同步
+    setTimeout(() => {
+      const calBtn = document.querySelector('.nav-item[onclick*="calendar"]');
+      showPage('calendar', calBtn);
+      fetchGCalEvents(token);
+    }, 300);
+  })();
 });
 
 </script>
