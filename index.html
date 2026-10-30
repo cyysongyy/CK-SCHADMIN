@@ -8,7 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -296,25 +295,42 @@
   .meeting-file-name { font-size: 13px; font-weight: 600; color: #1e293b; line-height: 1.4; }
   .meeting-file-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
   .meeting-loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+  /* ── Duty page ── */
+  .duty-filter-btn {
+    padding:5px 14px;border-radius:20px;font-size:13px;cursor:pointer;
+    border:2px solid #e2e8f0;background:#f8fafc;color:#475569;font-weight:500;transition:all .15s;
+  }
+  .duty-filter-btn.active { border-color:#3b82f6;background:#eff6ff;color:#1d4ed8; }
+  .duty-filter-btn:hover:not(.active) { border-color:#94a3b8;background:#f1f5f9; }
+  .duty-tag {
+    background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;
+    border-radius:6px;padding:1px 8px;font-size:11px;font-weight:500;
+  }
+  .duty-toggle { background:none;border:none;color:#3b82f6;cursor:pointer;font-size:11px;padding:2px 0;margin-top:4px;display:block; }
+  tr.duty-hidden { display:none; }
+
 </style>
 </head>
 <body>
 
 <!-- ══════════════════════════════════════════════════════════
-     AUTH OVERLAY  — Google 帳戶登入（僅限授權帳戶）
+     AUTH OVERLAY  — 首次開啟輸入密碼，localStorage 記住狀態
 ══════════════════════════════════════════════════════════ -->
 <div id="authOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%);display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:20px;padding:44px 36px 36px;width:340px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,0.5);text-align:center">
     <div style="font-size:52px;margin-bottom:14px">🏫</div>
     <div style="font-size:21px;font-weight:700;color:#1e293b;margin-bottom:4px">Young校務管理系統</div>
     <div style="font-size:13px;color:#64748b;margin-bottom:32px">辰光國民小學</div>
-    <div id="authStatus" style="font-size:13px;color:#64748b;margin-bottom:12px">確認登入狀態中…</div>
-    <div id="authErr" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px;text-align:left;padding-left:4px"></div>
-    <button id="authBtn" onclick="doLogin()"
-      style="width:100%;padding:13px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;letter-spacing:.5px;display:none">
-      使用 Google 帳戶登入
+    <input id="authInput" type="password" placeholder="請輸入密碼"
+      onkeydown="if(event.key==='Enter')doLogin()"
+      style="width:100%;padding:13px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;outline:none;margin-bottom:8px;box-sizing:border-box;transition:border-color .2s"
+      onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">
+    <div id="authErr" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px;text-align:left;padding-left:4px">❌ 密碼錯誤，請再試一次</div>
+    <button onclick="doLogin()"
+      style="width:100%;padding:13px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;letter-spacing:.5px">
+      進入系統 →
     </button>
-    <div style="margin-top:20px;font-size:11px;color:#cbd5e1">僅限授權帳戶登入，此裝置將自動記住登入狀態</div>
+    <div style="margin-top:20px;font-size:11px;color:#cbd5e1">首次登入後，此裝置將自動記住，無需重複輸入</div>
   </div>
 </div>
 
@@ -365,6 +381,9 @@
   <button class="nav-item" onclick="showPage('staff',this)">
     <span class="nav-icon">👩‍🏫</span> 教職員名冊
   </button>
+  <button class="nav-item" onclick="showPage('duty',this)">
+    <span class="nav-icon">📌</span> 行政分工一覽
+  </button>
   <button class="nav-item" onclick="showPage('meeting',this)">
     <span class="nav-icon">📑</span> 會議記錄
   </button>
@@ -388,13 +407,7 @@
 
   <!-- ═══════════════════════════════════════════════════════ DASHBOARD -->
   <section class="page active" id="page-dashboard">
-    <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-      <div style="display:flex;align-items:center;gap:8px">
-        📊 系統儀表板
-        <span id="semBadge" style="font-size:13px;font-weight:700;background:#1d4ed8;color:#fff;padding:3px 10px;border-radius:20px;vertical-align:middle;letter-spacing:1px"></span>
-      </div>
-      <div id="dashDateWeek" style="font-size:13px;color:#64748b;font-weight:600;letter-spacing:0.5px;white-space:nowrap"></div>
-    </div>
+    <div class="page-title">📊 系統儀表板 <span id="semBadge" style="font-size:13px;font-weight:700;background:#1d4ed8;color:#fff;padding:3px 10px;border-radius:20px;margin-left:8px;vertical-align:middle;letter-spacing:1px"></span></div>
 
     <div class="cards-row" id="dashCards"></div>
 
@@ -784,7 +797,7 @@
             <li><a href="https://drive.google.com/drive/folders/1qkkCAOfK9ttR2vgOpKGc31WQZlQAZFTs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 週一晨會SEL</a></li>
             <li><a href="https://drive.google.com/drive/folders/1hYuYujLB_ZwbAJNTnr4xpEFK_n06oRzZ" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-check in&amp;out-科任</a></li>
             <li><a href="https://drive.google.com/drive/folders/1S74S0YUbTuI1cPbNNIO6WWdOoDMGDvy_" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL-線上遊戲</a></li>
-            <li><a href="https://drive.google.com/drive/folders/1TlM6bD_PDcFmkKuirRJxX1hK2hVlb2_E" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 圍圈</a></li>
+            <li><a href="https://drive.google.com/drive/folders/1iUmSMlT2BhP0sj4AkvCN4t4gIiymAtHR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 圍圈</a></li>
             <li><a href="https://drive.google.com/drive/folders/1Gfd-ufURJt3ZC9bur4sIqLRJOgH0CZDw" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 SEL各種資源</a></li>
             <li><a href="https://drive.google.com/drive/folders/1xwWBVzbxm2ZDbrRFR_birOSg0_vEY4IR" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 雙語SEL-英師</a></li>
             <li><a href="https://drive.google.com/drive/folders/1h5JQikvVKfXF-jrmQUZG43xwEDE6fTxs" target="_blank" style="text-decoration:none;color:#374151;font-size:13px;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">📂 教室佈置</a></li>
@@ -858,8 +871,8 @@
     <!-- 行事曆週次總表 -->
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">📅 <span id="calWeeklyTitle">行事曆週次總覽</span></span>
-        <a href="https://docs.google.com/document/d/1iMBscmtH4LoJupaIwGE9s8rPz_KaLV1J/edit?usp=sharing" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">📄 原始檔案</a>
+        <span class="panel-title">📅 114學年度第一學期行事曆週次總覽</span>
+        <a href="https://drive.google.com/file/d/11O-6yxeNZF-FNa5poOuhuQIYR45DNBTq/view" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">📄 原始檔案</a>
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -945,18 +958,14 @@
 
     <!-- 1-6年級校本課程規劃 -->
     <div class="panel" style="margin-top:20px">
-      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span class="panel-title">📚 1–6年級 SEL 校本課程規劃</span>
-        <a href="https://drive.google.com/drive/folders/1G6DqtLiE9vW8ofGiDOSTs2Vu4acrg8We" target="_blank"
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="panel-title">📚 114下・1–6年級 SEL 校本課程規劃</span>
+        <a href="https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy" target="_blank"
            style="font-size:12px;color:#3b82f6;text-decoration:none;padding:3px 10px;border:1px solid #93c5fd;border-radius:6px;background:#eff6ff">
           📂 Drive 教案資料夾
         </a>
       </div>
-      <div class="panel-body" style="padding-top:0">
-        <div class="meeting-year-tabs" id="selPlanYearTabs" style="margin-top:12px"></div>
-        <div class="meeting-sem-tabs" id="selPlanSemTabs" style="margin-bottom:10px"></div>
-        <div id="selCurriculumTable"></div>
-      </div>
+      <div class="panel-body" id="selCurriculumTable"></div>
     </div>
   </section>
 
@@ -1012,18 +1021,15 @@
 
     <!-- 學年度 tabs -->
     <div class="meeting-year-tabs" id="meetingYearTabs">
-      <button class="meeting-tab" data-year="116" onclick="switchMeetingYear('116',this)">116學年度</button>
-      <button class="meeting-tab active" data-year="115" onclick="switchMeetingYear('115',this)">115學年度</button>
-      <button class="meeting-tab" data-year="114" onclick="switchMeetingYear('114',this)">114學年度</button>
-      <button class="meeting-tab" data-year="113" onclick="switchMeetingYear('113',this)">113學年度</button>
-      <button class="meeting-tab" data-year="112" onclick="switchMeetingYear('112',this)">112學年度</button>
-      <button class="meeting-tab" style="opacity:.7" onclick="addMeetingYear()" title="手動新增學年度">＋ 新增學年度</button>
+      <button class="meeting-tab active" onclick="switchMeetingYear('114',this)">114學年度</button>
+      <button class="meeting-tab" onclick="switchMeetingYear('113',this)">113學年度</button>
+      <button class="meeting-tab" onclick="switchMeetingYear('112',this)">112學年度</button>
     </div>
 
     <!-- 學期 tabs -->
     <div class="meeting-sem-tabs" id="meetingSemTabs">
-      <button class="meeting-sem-tab active" onclick="switchMeetingSem('上學期',this)">上學期</button>
-      <button class="meeting-sem-tab" onclick="switchMeetingSem('下學期',this)">下學期</button>
+      <button class="meeting-sem-tab" onclick="switchMeetingSem('上學期',this)">上學期</button>
+      <button class="meeting-sem-tab active" onclick="switchMeetingSem('下學期',this)">下學期</button>
     </div>
 
     <!-- 檔案列表 -->
@@ -1031,6 +1037,85 @@
       <div class="meeting-loading">⏳ 載入中...</div>
     </div>
   </section>
+
+  <!-- ═══════════════════════════════════════════════════════ ADMIN DUTY -->
+  <section class="page" id="page-duty">
+    <div class="page-title">📌 行政分工一覽
+      <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="window.print()">🖨️ 列印</button>
+    </div>
+
+    <!-- Hero -->
+    <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:20px;display:flex;align-items:center;gap:20px;box-shadow:0 4px 16px rgba(37,99,235,.25)">
+      <div style="font-size:48px;line-height:1">📋</div>
+      <div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:1px" id="dutyTitle">113 學年度（上）行政業務一覽表</div>
+        <div style="font-size:13px;opacity:.85;margin-top:4px">雲林縣北港鎮辰光國民小學</div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <span style="background:rgba(255,255,255,.2);border-radius:20px;padding:3px 12px;font-size:12px">📅 113學年度上學期</span>
+          <span style="background:rgba(255,255,255,.2);border-radius:20px;padding:3px 12px;font-size:12px">👥 全體教職員</span>
+          <span style="background:rgba(255,255,255,.2);border-radius:20px;padding:3px 12px;font-size:12px">🏢 各處室業務分工</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="cards-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card"><div style="font-size:28px">👥</div><div><div style="font-size:22px;font-weight:700;color:#1d4ed8">15</div><div style="font-size:12px;color:#64748b">教職員總數</div></div></div>
+      <div class="stat-card"><div style="font-size:28px">📚</div><div><div style="font-size:22px;font-weight:700;color:#1d4ed8">9</div><div style="font-size:12px;color:#64748b">班級導師</div></div></div>
+      <div class="stat-card"><div style="font-size:28px">🏛️</div><div><div style="font-size:22px;font-weight:700;color:#1d4ed8">3</div><div style="font-size:12px;color:#64748b">行政主管</div></div></div>
+      <div class="stat-card"><div style="font-size:28px">🔬</div><div><div style="font-size:22px;font-weight:700;color:#1d4ed8">3</div><div style="font-size:12px;color:#64748b">科任教師/其他</div></div></div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="background:#fff;border-radius:12px;padding:12px 18px;margin:16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.07)">
+      <span style="font-size:13px;color:#64748b;font-weight:600">篩選處室：</span>
+      <button class="duty-filter-btn active" onclick="dutyFilter('all',this)">全部</button>
+      <button class="duty-filter-btn" onclick="dutyFilter('校長室',this)">🏅 校長室</button>
+      <button class="duty-filter-btn" onclick="dutyFilter('教導處',this)">📚 教導處</button>
+      <button class="duty-filter-btn" onclick="dutyFilter('總務處',this)">🔧 總務處</button>
+      <button class="duty-filter-btn" onclick="dutyFilter('其他',this)">🩺 其他</button>
+      <input id="dutySearch" style="margin-left:auto;padding:6px 14px;border:2px solid #e2e8f0;border-radius:20px;font-size:13px;outline:none;width:200px" placeholder="🔍 搜尋姓名／職稱／業務..." oninput="dutySearchFn(this.value)">
+    </div>
+
+    <!-- Table -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📋 教職員行政業務分工</span>
+        <span id="dutyRowCount" style="font-size:13px;color:#64748b">共 15 筆</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr style="font-size:12px">
+              <th style="min-width:32px">#</th>
+              <th>姓名</th>
+              <th>職稱</th>
+              <th>處室</th>
+              <th>行政兼辦業務</th>
+            </tr>
+          </thead>
+          <tbody id="dutyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bulletin board -->
+    <div class="panel" style="margin-top:4px">
+      <div class="panel-header"><span class="panel-title">📌 中廊公佈欄負責人分配</span></div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px">
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">語文天地</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">📖 教務組</div></div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">生活剪影</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">📸 吳惠雅 老師</div></div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">榮譽榜（右：教務）</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">🏆 教務組</div></div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">榮譽榜（左：訓導）</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">🏆 訓導組</div></div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">健康園地</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">💊 蔡淑真 護理師</div></div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc"><div style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:600">運動新知</div><div style="font-size:14px;font-weight:700;color:#1d4ed8">🏃 黃于玲 老師</div></div>
+        </div>
+        <div style="font-size:12px;color:#94a3b8;background:#f8fafc;border-radius:8px;padding:10px 14px;line-height:1.8">⚠️ 請各負責人定期更新自己負責的公佈欄。各班有得獎的資訊，再請導師提供給負責人。</div>
+      </div>
+    </div>
+  </section>
+
 
 </main>
 
@@ -1488,83 +1573,46 @@ let _fbSyncing = false; // 防止儲存迴圈
 // ═══════════════════════════════════════════════════════════════
 //  GAS 週三進修即時讀取 — 部署後填入 URL
 // ═══════════════════════════════════════════════════════════════
-const GAS_TRAINING_URL = 'https://script.google.com/macros/s/AKfycbzWt8D4DkZbkDT-2LS_l4rIEG6YxCjIvTkxJO-Ze912Pe3xO0wJkRUL9wK1440k8JON/exec';
+const GAS_TRAINING_URL = ''; // 已改用 Firebase，不需要此 URL
 
 // ═══════════════════════════════════════════════════════════════
-//  GAS 學生名冊即時讀取（roster_gas.js）— 部署後填入 URL
-//  學生姓名不再寫死在這份公開原始碼裡，改成執行期從私有試算表讀取，
-//  本機會快取一份到 localStorage（ck_roster_cache），下次開啟先用
-//  快取顯示，背景再更新，資料有變動時會自動重新整理頁面套用。
+//  AUTH  ── localStorage 一次性密碼，記住後不需重複輸入
 // ═══════════════════════════════════════════════════════════════
-const GAS_ROSTER_URL = '';
+const _AUTH_KEY = 'yk_auth_v1';
+const _AUTH_PWD = '1204'; // ← 修改此處可更換密碼
 
-// ═══════════════════════════════════════════════════════════════
-//  AUTH  ── Firebase Google 登入，僅允許白名單帳戶
-//  （資料庫規則同步限制相同白名單，前端檢查只是提早給錯誤訊息）
-// ═══════════════════════════════════════════════════════════════
-const _ALLOWED_EMAILS = ['cyysongyy@gmail.com']; // ← 修改此處可增減授權帳戶（需同步修改資料庫規則）
-const _fbAuth = firebase.auth();
-let _authUser = null;
-let _syncStarted = false;
-
-// 清除舊版密碼機制殘留
-try { localStorage.removeItem('yk_auth_v1'); } catch (e) {}
-
-function _authMsg(msg, isErr) {
-  const st  = document.getElementById('authStatus');
-  const err = document.getElementById('authErr');
-  if (isErr) { err.textContent = msg; err.style.display = 'block'; }
-  else       { st.textContent = msg; err.style.display = 'none'; }
-}
-
-// 登入完成後才啟動 Firebase 同步（_startFirebaseSync 由下方 init() 定義，
-// auth 狀態可能比 init 先就緒，故用輪詢等它出現）
-function _kickSyncIfReady() {
-  if (_syncStarted || !_authUser) return;
-  if (window._startFirebaseSync) { _syncStarted = true; window._startFirebaseSync(); }
-  else setTimeout(_kickSyncIfReady, 200);
-}
-
-_fbAuth.onAuthStateChanged(user => {
+(function checkAuth() {
   const overlay = document.getElementById('authOverlay');
-  const btn = document.getElementById('authBtn');
-  if (user && _ALLOWED_EMAILS.includes(user.email)) {
-    _authUser = user;
-    if (overlay) overlay.style.display = 'none';
-    _kickSyncIfReady();
-    return;
+  if (!overlay) return;
+  if (localStorage.getItem(_AUTH_KEY) === 'granted') {
+    overlay.style.display = 'none';   // 已認證 → 直接隱藏
   }
-  _authUser = null;
-  if (user) { // 已登入 Google 但不在白名單
-    _authMsg('❌ 此帳戶未獲授權：' + (user.email || '(無法取得信箱)'), true);
-    _fbAuth.signOut();
-  } else {
-    _authMsg('請使用授權的 Google 帳戶登入', false);
-  }
-  if (btn) btn.style.display = 'block';
-  if (overlay) overlay.style.display = 'flex';
-});
+  // 未認證時 overlay 預設 display:flex 保持顯示
+  // 自動聚焦密碼欄
+  setTimeout(() => {
+    const inp = document.getElementById('authInput');
+    if (inp && overlay.style.display !== 'none') inp.focus();
+  }, 100);
+})();
 
 function doLogin() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  _authMsg('登入中…', false);
-  _fbAuth.signInWithPopup(provider).catch(err => {
-    if (err && err.code === 'auth/popup-blocked') {
-      // 彈出視窗被擋 → 改用整頁跳轉
-      _fbAuth.signInWithRedirect(provider);
-      return;
-    }
-    if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
-      _authMsg('請使用授權的 Google 帳戶登入', false);
-      return;
-    }
-    _authMsg('❌ 登入失敗：' + (err && err.message || err), true);
-  });
+  const inp = document.getElementById('authInput');
+  const err = document.getElementById('authErr');
+  if (inp.value === _AUTH_PWD) {
+    localStorage.setItem(_AUTH_KEY, 'granted');
+    document.getElementById('authOverlay').style.display = 'none';
+    err.style.display = 'none';
+  } else {
+    err.style.display = 'block';
+    inp.value = '';
+    inp.focus();
+  }
 }
 
 function doLogout() {
-  if (!confirm('確定要登出？下次開啟需重新登入 Google 帳戶。')) return;
-  _fbAuth.signOut().then(() => location.reload());
+  if (!confirm('確定要登出？下次開啟需重新輸入密碼。')) return;
+  localStorage.removeItem(_AUTH_KEY);
+  location.reload();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1605,9 +1653,6 @@ function getSemesterRange(year, sem) {
 const _semRange = getSemesterRange(SCHOOL_YEAR, SEMESTER);
 const SEM_START = _semRange.start;
 const SEM_END   = _semRange.end;
-// 學校行事曆「第1週」起始日（依115上學期行事曆：第1週 = 8/30~9/5）
-// ※換學期／學年度時，請依當學期行事曆的第1週起始日更新此常數
-const SEM_WEEK1_START = new Date('2026-08-30');
 
 // ═══════════════════════════════════════════════════════════════
 //  DATA STORE (in-memory)
@@ -1718,116 +1763,52 @@ let events = [
   {id:87,  name:'輔導團專業對話',               date:'2026-06-12', type:'行政', src:'gcal-personal', desc:'輔導團專業對話'},
   {id:88,  name:'雲菁計畫第二梯次｜結業式',      date:'2026-07-02', type:'進修', src:'gcal-personal', desc:'雲菁計畫第二梯次 結業式 09:00-14:00（線上 Meet）'},
   {id:89,  name:'TFT明日學校 辰光梯次（起）',    date:'2026-07-20', type:'活動', src:'gcal-personal', desc:'TFT 2026 夏季明日學校 辰光梯次 07/20-07/29，地點：雲林辰光國小'},
-  // ── 115學年度上學期行事曆（來源：115學年度上學期-週次行事曆-縣府-學生版）──
-  {id:90,  name:'第一學期開學日',       date:'2026-08-31', type:'行政', desc:'115學年度第一學期開學日（星期一）'},
-  {id:91,  name:'中秋節連續假期',       date:'2026-09-25', type:'假日', desc:'9月25日至9月26日為中秋節連續假期'},
-  {id:92,  name:'教師節放假',           date:'2026-09-28', type:'假日', desc:'教師節放假1天'},
-  {id:93,  name:'期初親職座談暨班親會', date:'2026-09-19', type:'活動', desc:'9/19（六）親職座談會暨班親會'},
-  {id:94,  name:'雙十國慶日連續假期',   date:'2026-10-09', type:'假日', desc:'10月9日至10月10日為雙十國慶日連續假期'},
-  {id:95,  name:'光復節調整放假',       date:'2026-10-26', type:'假日', desc:'光復節調整放假1天'},
-  {id:96,  name:'期中評量（四五）',     date:'2026-11-05', type:'考試', desc:'115上各年級期中評量，第1天'},
-  {id:97,  name:'期中評量（四五）',     date:'2026-11-06', type:'考試', desc:'115上各年級期中評量，第2天'},
-  {id:98,  name:'水林烏克麗麗嘉年華會', date:'2026-11-01', type:'活動', desc:'水林全國烏克麗麗嘉年華會（週日）'},
-  {id:99,  name:'戶外教育-中埔竹夢森林', date:'2026-11-12', type:'活動', desc:'戶外教學：中埔竹夢森林'},
-  {id:100, name:'行憲紀念日連續假期',   date:'2026-12-25', type:'假日', desc:'12月25日至12月26日為行憲紀念日連續假期'},
-  {id:101, name:'社區健走暨動靜態成果展', date:'2026-12-25', type:'活動', desc:'暫定：社區健走暨創意變裝秀踩街、學生動靜態成果展'},
-  {id:102, name:'元旦連續假期',         date:'2027-01-01', type:'假日', desc:'1月1日至1月2日為元旦連續假期'},
-  {id:103, name:'期末評量（四五）',     date:'2027-01-14', type:'考試', desc:'115上各年級期末評量，第1天'},
-  {id:104, name:'期末評量（四五）',     date:'2027-01-15', type:'考試', desc:'115上各年級期末評量，第2天'},
-  {id:105, name:'休業式',               date:'2027-01-20', type:'行政', desc:'115學年度第一學期休業式，1月21日起寒假開始'},
-  // ── 115上學期週三進修規劃（來源：115上學年度「教師進修研習」規劃表-上學期）──
-  {id:106, name:'週三進修-交通安全教育課程研習',       date:'2026-09-09', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:107, name:'週三進修-班級經營與輔導：生命教育與情緒管理', date:'2026-09-16', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:108, name:'週三進修-有效體育教學：活力扯鈴大家一起來', date:'2026-09-23', type:'進修', desc:'13:30-15:30，研習時數2小時'},
-  {id:109, name:'週三進修-家庭教育校園正向管教與零霸凌研習', date:'2026-09-30', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:110, name:'週三進修-資通安全通識安全教育訓練',   date:'2026-10-07', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:111, name:'週三進修-第一次全縣共備',             date:'2026-10-14', type:'進修', desc:'依縣府公告及訊息辦理，13:30-16:30'},
-  {id:112, name:'週三進修-雲林縣114年度區域性特殊教育研習(北港鎮場次)', date:'2026-10-21', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:113, name:'週三進修-學力測驗題型與教學引導研習', date:'2026-10-28', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:114, name:'週三進修-第一次四校策略聯盟分享研習(朝陽)', date:'2026-11-04', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:115, name:'週三進修-第二次全縣共備',             date:'2026-11-11', type:'進修', desc:'依縣府公告及訊息辦理，13:30-16:30'},
-  {id:116, name:'週三進修-SEL三校共識研習',            date:'2026-11-18', type:'進修', desc:'跨校教師共同交流社會情緒學習(SEL)理論與實務，13:30-16:30'},
-  {id:117, name:'週三進修-性別平等及勞動權益相關課程', date:'2026-11-25', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:118, name:'週三進修-運動舞起來',                 date:'2026-12-02', type:'進修', desc:'13:30-16:30，研習時數3小時'},
-  {id:119, name:'週三進修-第三次全縣共備',             date:'2026-12-09', type:'進修', desc:'依縣府公告及訊息辦理，13:30-15:30'},
-  {id:120, name:'週三進修-書法「藝」起寫春聯研習',     date:'2026-12-16', type:'進修', desc:'15:30-16:30，研習時數3小時'},
-  {id:121, name:'週三進修-數位教學與平台運用',         date:'2026-12-23', type:'進修', desc:'13:30-16:30，研習時數3小時'},
 ];
 
 // SEL 校本課程資料已移至 renderSelCurriculumTable() 函式（來源：Drive 教案資料夾）
-// https://drive.google.com/drive/folders/1G6DqtLiE9vW8ofGiDOSTs2Vu4acrg8We
+// https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy
 
-// ── 學生名冊：姓名不再寫死在公開原始碼裡（改由 GAS_ROSTER_URL 執行期讀取）。
-// 下面這份只是「結構骨架」（班級/座號/學號，name 留空）——
-// 在 GAS_ROSTER_URL 還沒設定，或第一次讀取尚未完成之前的保底資料，
-// 讓班級人數統計等功能不會整個壞掉，只是暫時看不到姓名而已。
-const STUDENT_ROSTER_FALLBACK = [
+// ── 真實學生名冊（來源：114學年度第2學期各班成績表.xlsx）──
+const STUDENT_ROSTER = [
   // 1年甲班
-  {cls:'1年甲班',gradeNum:1,seat:1,sid:'114001',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:2,sid:'114002',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:3,sid:'114003',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:4,sid:'114004',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:5,sid:'114005',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:6,sid:'114006',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:7,sid:'114008',name:''},
-  {cls:'1年甲班',gradeNum:1,seat:8,sid:'114010',name:''},
+  {cls:'1年甲班',gradeNum:1,seat:1,sid:'114001',name:'許維文'},
+  {cls:'1年甲班',gradeNum:1,seat:2,sid:'114002',name:'許維仁'},
+  {cls:'1年甲班',gradeNum:1,seat:3,sid:'114003',name:'許孟峰'},
+  {cls:'1年甲班',gradeNum:1,seat:4,sid:'114004',name:'黃亦忻'},
+  {cls:'1年甲班',gradeNum:1,seat:5,sid:'114005',name:'黃亦孜'},
+  {cls:'1年甲班',gradeNum:1,seat:6,sid:'114006',name:'薛筑尹'},
+  {cls:'1年甲班',gradeNum:1,seat:7,sid:'114008',name:'蔡幼汝'},
+  {cls:'1年甲班',gradeNum:1,seat:8,sid:'114010',name:'陳宇浩'},
   // 2年甲班
-  {cls:'2年甲班',gradeNum:2,seat:1,sid:'113001',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:2,sid:'113002',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:3,sid:'113003',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:4,sid:'113004',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:5,sid:'113005',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:6,sid:'113006',name:''},
-  {cls:'2年甲班',gradeNum:2,seat:7,sid:'113007',name:''},
+  {cls:'2年甲班',gradeNum:2,seat:1,sid:'113001',name:'黃宥傑'},
+  {cls:'2年甲班',gradeNum:2,seat:2,sid:'113002',name:'李姀妤'},
+  {cls:'2年甲班',gradeNum:2,seat:3,sid:'113003',name:'李宥臻'},
+  {cls:'2年甲班',gradeNum:2,seat:4,sid:'113004',name:'許雅婷'},
+  {cls:'2年甲班',gradeNum:2,seat:5,sid:'113005',name:'王馨巧'},
+  {cls:'2年甲班',gradeNum:2,seat:6,sid:'113006',name:'黃姿予'},
+  {cls:'2年甲班',gradeNum:2,seat:7,sid:'113007',name:'陳巧苓'},
   // 3年甲班
-  {cls:'3年甲班',gradeNum:3,seat:1,sid:'112001',name:''},
-  {cls:'3年甲班',gradeNum:3,seat:2,sid:'112002',name:''},
-  {cls:'3年甲班',gradeNum:3,seat:3,sid:'112003',name:''},
-  {cls:'3年甲班',gradeNum:3,seat:4,sid:'112004',name:''},
-  {cls:'3年甲班',gradeNum:3,seat:5,sid:'112005',name:''},
+  {cls:'3年甲班',gradeNum:3,seat:1,sid:'112001',name:'王晨安'},
+  {cls:'3年甲班',gradeNum:3,seat:2,sid:'112002',name:'吳雲蓁'},
+  {cls:'3年甲班',gradeNum:3,seat:3,sid:'112003',name:'張瑄芸'},
+  {cls:'3年甲班',gradeNum:3,seat:4,sid:'112004',name:'郭佑士'},
+  {cls:'3年甲班',gradeNum:3,seat:5,sid:'112005',name:'李丞恩'},
   // 4年甲班
-  {cls:'4年甲班',gradeNum:4,seat:1,sid:'111001',name:''},
-  {cls:'4年甲班',gradeNum:4,seat:2,sid:'111002',name:''},
-  {cls:'4年甲班',gradeNum:4,seat:3,sid:'111003',name:''},
+  {cls:'4年甲班',gradeNum:4,seat:1,sid:'111001',name:'王智弘'},
+  {cls:'4年甲班',gradeNum:4,seat:2,sid:'111002',name:'王玄龍'},
+  {cls:'4年甲班',gradeNum:4,seat:3,sid:'111003',name:'戴妍安'},
   // 5年甲班
-  {cls:'5年甲班',gradeNum:5,seat:1,sid:'110001',name:''},
-  {cls:'5年甲班',gradeNum:5,seat:2,sid:'110003',name:''},
-  {cls:'5年甲班',gradeNum:5,seat:3,sid:'110005',name:''},
-  {cls:'5年甲班',gradeNum:5,seat:4,sid:'110006',name:''},
-  {cls:'5年甲班',gradeNum:5,seat:5,sid:'110007',name:''},
-  {cls:'5年甲班',gradeNum:5,seat:6,sid:'110008',name:''},
+  {cls:'5年甲班',gradeNum:5,seat:1,sid:'110001',name:'徐秉科'},
+  {cls:'5年甲班',gradeNum:5,seat:2,sid:'110003',name:'張瑋祐'},
+  {cls:'5年甲班',gradeNum:5,seat:3,sid:'110005',name:'張哲瑜'},
+  {cls:'5年甲班',gradeNum:5,seat:4,sid:'110006',name:'林恩璽'},
+  {cls:'5年甲班',gradeNum:5,seat:5,sid:'110007',name:'施宥妍'},
+  {cls:'5年甲班',gradeNum:5,seat:6,sid:'110008',name:'吳庭宇'},
   // 6年甲班
-  {cls:'6年甲班',gradeNum:6,seat:1,sid:'109001',name:''},
-  {cls:'6年甲班',gradeNum:6,seat:2,sid:'109002',name:''},
-  {cls:'6年甲班',gradeNum:6,seat:3,sid:'109004',name:''},
+  {cls:'6年甲班',gradeNum:6,seat:1,sid:'109001',name:'施宥宇'},
+  {cls:'6年甲班',gradeNum:6,seat:2,sid:'109002',name:'韓劼宸'},
+  {cls:'6年甲班',gradeNum:6,seat:3,sid:'109004',name:'陳伊諾'},
 ];
-// 實際使用的名冊：先用本機快取（若有），否則用上面的骨架保底；
-// 兩者都用「同一個陣列參照」原地更新（不重新賦值），這樣其他地方
-// 用 STUDENT_ROSTER.filter(...) / .find(...) 讀到的永遠是最新內容。
-const STUDENT_ROSTER = (function(){
-  try {
-    const cached = JSON.parse(localStorage.getItem('ck_roster_cache'));
-    if (Array.isArray(cached) && cached.length) return cached;
-  } catch (e) { /* 快取壞掉就用骨架 */ }
-  return STUDENT_ROSTER_FALLBACK.slice();
-})();
-function refreshRoster() {
-  if (!GAS_ROSTER_URL) return;
-  fetch(GAS_ROSTER_URL + '?action=roster')
-    .then(r => r.json())
-    .then(d => {
-      if (!d.ok || !Array.isArray(d.roster) || !d.roster.length) return;
-      const changed = JSON.stringify(d.roster) !== JSON.stringify(STUDENT_ROSTER);
-      localStorage.setItem('ck_roster_cache', JSON.stringify(d.roster));
-      if (changed) {
-        // 名冊內容變了（例如第一次成功讀到真實姓名，或新增/異動學生），
-        // 畫面上可能已經用舊資料算過/畫過一次，重新整理最保險。
-        location.reload();
-      }
-    })
-    .catch(e => console.warn('roster fetch failed:', e));
-}
-refreshRoster();
 const ALL_CLASSES = ['1年甲班','2年甲班','3年甲班','4年甲班','5年甲班','6年甲班'];
 const SUBJECTS_LOW  = ['國語','數學','生活','體育','藝術'];      // 1-2年級
 const SUBJECTS_MID  = ['國語','數學','英語','自然','社會','體育','藝術']; // 3-4年級
@@ -1953,10 +1934,11 @@ let selCourses = [
   {id:2,name:'情緒調節小達人',domain:'自我管理',gradeGroup:'低年級（1-2年級）',date:`${yy}-10-04`,sessions:4,teacher:'李老師',goal:'學習深呼吸、正向自我對話等調節策略',activity:'角色扮演、情境模擬',status:'已完成',note:''},
   {id:3,name:'同理心大冒險',domain:'社會覺察',gradeGroup:'中年級（3-4年級）',date:`${yy}-09-13`,sessions:4,teacher:'王老師',goal:'培養理解他人立場與感受的能力',activity:'觀點取替活動、小組討論',status:'已完成',note:''},
   {id:4,name:'團隊合作我最棒',domain:'人際技巧',gradeGroup:'中年級（3-4年級）',date:`${yy}-10-11`,sessions:4,teacher:'王老師',goal:'學習傾聽、協商與合作技巧',activity:'團隊任務、合作遊戲',status:'進行中',note:''},
-  {id:5,name:'理性思考做決定',domain:'負責任決策',gradeGroup:'高年級（5-6年級）',date:`${yy}-11-14`,sessions:6,teacher:'張老師',goal:'培養分析情境、評估後果的決策能力',activity:'案例分析、辯論活動',status:'已報名',note:''},
+  {id:5,name:'理性思考做決定',domain:'負責任決策',gradeGroup:'高年級（5-6年級）',date:`${yy}-${mm}-14`,sessions:6,teacher:'張老師',goal:'培養分析情境、評估後果的決策能力',activity:'案例分析、辯論活動',status:'已報名',note:''},
 ];
 
 let nextId = { events: 38, grades: 11, admin: 8, training: 6, sel: 6 };
+let dutyEdits = {}; // 行政分工編輯紀錄（Firebase 同步）
 let editingId = { events: null, grades: null, admin: null, training: null, sel: null };
 
 // ── 資料持久化（localStorage + Firebase）──────────────────────
@@ -1969,11 +1951,12 @@ function saveData() {
     localStorage.setItem('ck_training', JSON.stringify(trainings));
     localStorage.setItem('ck_nextId',   JSON.stringify(nextId));
     localStorage.setItem('ck_nextStaffId', String(nextStaffId));
+    localStorage.setItem('ck_duty_edits', JSON.stringify(dutyEdits));
   } catch(e) { console.warn('saveData error:', e); }
   if(!_fbSyncing) {
     _fbRef.set({
       events, staffList, selCourses, adminTasks, trainings, nextId, nextStaffId,
-      grades, gradeNextId, _ts: Date.now()
+      grades, gradeNextId, dutyEdits, _ts: Date.now()
     }).catch(e => console.warn('Firebase save failed:', e));
   }
 }
@@ -1993,6 +1976,8 @@ function loadData() {
     if(ni) { const o=JSON.parse(ni); Object.assign(nextId, o); }
     const ns = localStorage.getItem('ck_nextStaffId');
     if(ns) nextStaffId = parseInt(ns);
+    const de = localStorage.getItem('ck_duty_edits');
+    if(de) dutyEdits = JSON.parse(de);
   } catch(e) { console.warn('loadData error:', e); }
 }
 function resetData() {
@@ -2101,37 +2086,25 @@ function confirmDel(fn) { if(confirm('確定要刪除此筆資料？')) fn(); }
 // ═══════════════════════════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-// ── 週三進修（從 GAS → Google 試算表快取 讀取）──
+// ── 週三進修（從 Firebase 即時讀取）──
 async function fetchWeeklyTraining() {
   const btn   = document.getElementById('gasTrainingBtn');
   const block = document.getElementById('gasTrainingBlock');
   if (!block) return;
 
-  if (!GAS_TRAINING_URL) {
-    block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 進修系統設定中，請聯絡管理員</div>';
-    return;
-  }
-
   if (btn) { btn.textContent = '⏳ 讀取中…'; btn.disabled = true; }
   block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">正在讀取本週進修資料…</div>';
 
   try {
-    const res  = await fetch(GAS_TRAINING_URL);
-    const data = await res.json();
+    const snap = await _fbDB.ref('weeklyTraining').once('value');
+    const data = snap.val();
 
-    // 從 fileName 或 source 取出週次（如「第17週-0615.docx」）更新標題列
-    const _weekSrc = (data && (data.fileName || data.source || ''));
-    const _wm = _weekSrc && _weekSrc.match(/第(\d+)週/);
-    const dwEl = document.getElementById('dashDateWeek');
-    if (_wm && dwEl) dwEl.textContent = `第 ${_wm[1]} 週`;
-
-    if (!data || !data.found || !data.trainingName || data.trainingName === '（請查閱夕會報告）') {
-      const msg = data && data.message ? data.message : '本週夕會報告尚未上傳，請稍後再按更新';
-      block.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 ${msg}</div>`;
+    if (!data || !data.trainingName) {
+      block.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px 0 10px;text-align:center">📋 本週進修資料尚未更新</div>';
     } else {
       const [, wm, wd] = (data.wedDate || '').split('-');
       const wedLabel = wm && wd ? `${parseInt(wm)}/${parseInt(wd)}（週三）` : '本週三';
-      const loc = data.location ? `　⏰ ${data.location}` : '';
+      const loc = data.location ? `　📍 ${data.location}` : '';
       block.innerHTML = `
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px">
           <div style="font-size:22px;line-height:1">📋</div>
@@ -3175,24 +3148,26 @@ const SEL_DOMAIN_COLORS = {
 };
 const SEL_STATUS_BADGE = {已完成:'badge-green',進行中:'badge-blue',已報名:'badge-yellow',規劃中:'badge-gray'};
 
-// ── 圍圈輪值表資料（115上學期，週四 3:00~3:20，來源：115學年度上學期週四下午品格SEL圍圈輪值表-分組版-1150831）
+// ── 圍圈輪值表資料（115上學期，週四 3:00~3:20）
 const SEL_ROTATION = [
-  { week:2,  date:'2026/9/10',  theme:'堅毅', A:'陳永芝', B:'吳惠雅' },
-  { week:3,  date:'2026/9/17',  theme:'堅毅', A:'黃雅玲', B:'蔡幸華' },
-  { week:4,  date:'2026/9/24',  theme:'感恩', A:'林瑞芳', B:'陳英曉' },
-  { week:5,  date:'2026/10/1',  theme:'感恩', A:'楊凱棋', B:'黃于玲' },
-  { week:6,  date:'2026/10/8',  theme:'熱情', A:'王瑞明', B:'王怡文' },
-  { week:7,  date:'2026/10/15', theme:'熱情', A:'羅昭倫', B:'陳永芝' },
-  { week:8,  date:'2026/10/22', theme:'自制', A:'吳惠雅', B:'黃雅玲' },
-  { week:9,  date:'2026/10/29', theme:'自制', A:'蔡幸華', B:'林瑞芳' },
-  { week:11, date:'2026/11/12', theme:'堅毅', A:'陳英曉', B:'楊凱棋' },
-  { week:13, date:'2026/11/26', theme:'堅毅', A:'黃于玲', B:'王瑞明' },
-  { week:14, date:'2026/12/3',  theme:'感恩', A:'王怡文', B:'羅昭倫' },
-  { week:15, date:'2026/12/10', theme:'感恩', A:'陳永芝', B:'吳惠雅' },
-  { week:16, date:'2026/12/17', theme:'熱情', A:'黃雅玲', B:'蔡幸華' },
-  { week:17, date:'2026/12/24', theme:'熱情', A:'林瑞芳', B:'陳英曉' },
-  { week:18, date:'2026/12/31', theme:'自制', A:'楊凱棋', B:'黃于玲' },
-  { week:19, date:'2027/1/7',   theme:'自制', A:'王瑞明', B:'王怡文' },
+  { week:2,  date:'2026/9/10',  theme:'感恩', A:'黃于玲', B:'楊凱琪' },
+  { week:3,  date:'2026/9/17',  theme:'感恩', A:'張曉鈴', B:'吳惠雅' },
+  { week:4,  date:'2026/9/24',  theme:'熱情', A:'王怡文', B:'陳英曉' },
+  { week:5,  date:'2026/10/1',  theme:'熱情', A:'陳永芝', B:'黃于玲' },
+  { week:6,  date:'2026/10/8',  theme:'自制', A:'黃雅玲', B:'張曉鈴' },
+  { week:7,  date:'2026/10/15', theme:'自制', A:'王瑞明', B:'王怡文' },
+  { week:8,  date:'2026/10/22', theme:'堅毅', A:'林瑞芳', B:'陳永芝' },
+  { week:9,  date:'2026/10/29', theme:'堅毅', A:'蔡幸華', B:'林瑞芳' },
+  { week:10, date:'2026/11/5',  theme:'感恩', A:'黃于玲', B:'楊凱琪' },
+  { week:11, date:'2026/11/12', theme:'感恩', A:'張曉鈴', B:'吳惠雅' },
+  { week:12, date:'2026/11/19', theme:'熱情', A:'王怡文', B:'陳英曉' },
+  { week:13, date:'2026/11/26', theme:'熱情', A:'陳永芝', B:'黃于玲' },
+  { week:14, date:'2026/12/3',  theme:'自制', A:'黃雅玲', B:'張曉鈴' },
+  { week:15, date:'2026/12/10', theme:'自制', A:'王瑞明', B:'王怡文' },
+  { week:16, date:'2026/12/17', theme:'堅毅', A:'林瑞芳', B:'陳永芝' },
+  { week:17, date:'2026/12/24', theme:'堅毅', A:'蔡幸華', B:'林瑞芳' },
+  { week:18, date:'2026/12/31', theme:'感恩', A:'黃于玲', B:'楊凱琪' },
+  { week:19, date:'2027/1/7',   theme:'感恩', A:'張曉鈴', B:'吳惠雅' },
 ];
 
 const SEL_THEME_COLOR = {
@@ -3204,38 +3179,16 @@ const SEL_THEME_COLOR = {
 
 let _selRotPage = 0; // 翻頁狀態：0 = 本週起第一組，1 = 下一組
 
-// 學期尚未建立正式輪值名單時，依「時間與週次」自動預排本學期每週四（僅日期/週次，人員待補）
-function _semesterRotationPlaceholder() {
-  const list = [];
-  const d = new Date(SEM_START);
-  while (d.getDay() !== 4) d.setDate(d.getDate() + 1); // 找學期內第一個週四
-  let wk = Math.floor((d - SEM_WEEK1_START) / 604800000) + 1;
-  while (d <= SEM_END) {
-    list.push({ week: wk, date: `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`, theme: '待排定', A: '待排定', B: '待排定' });
-    d.setDate(d.getDate() + 7);
-    wk++;
-  }
-  return list;
-}
-const _ROTATION_PLACEHOLDER_NOTE = `📅 ${SEM_LABEL}學期尚未建立正式輪值名單，以下依時間與週次預排，請至 <a href="https://drive.google.com/drive/folders/1TlM6bD_PDcFmkKuirRJxX1hK2hVlb2_E" target="_blank" style="color:#3b82f6">Drive 圍圈資料夾</a> 建立`;
-
 function renderDashRotation() {
   const el = document.getElementById('dashRotationGrid');
   if (!el) return;
   const today = new Date(); today.setHours(0,0,0,0);
-  const inSem = SEL_ROTATION.filter(r => { const d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
-  const usingPlaceholder = !inSem.length;
-  const source = usingPlaceholder ? _semesterRotationPlaceholder() : inSem;
-  let baseIdx = source.findIndex(r => new Date(r.date) >= today);
-  if (baseIdx < 0) {
-    el.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:14px;padding:20px 0;grid-column:1/-1">🎉 本學期週四品格圍圈輪值已結束</div>';
-    return;
-  }
+  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
+  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
   baseIdx = Math.max(0, baseIdx);
-  const rows = source.slice(baseIdx, baseIdx + 3);
+  const rows = SEL_ROTATION.slice(baseIdx, baseIdx + 3);
   const weekLabels = ['本週', '下週', '再下週'];
-  const banner = usingPlaceholder ? `<div style="grid-column:1/-1;font-size:12px;color:#94a3b8;margin-bottom:2px">${_ROTATION_PLACEHOLDER_NOTE}</div>` : '';
-  el.innerHTML = banner + rows.map((r, i) => {
+  el.innerHTML = rows.map((r, i) => {
     const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
     return `
     <div style="border:2px solid ${c.border};border-radius:12px;padding:16px;background:${c.bg};position:relative">
@@ -3264,13 +3217,9 @@ function renderSelRotation() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  const inSem = SEL_ROTATION.filter(r => { const d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
-  const usingPlaceholder = !inSem.length;
-  const source = usingPlaceholder ? _semesterRotationPlaceholder() : inSem;
-
   // 找到「本週或最近下一週」的起始索引（以今天為基準，固定起點）
-  let baseIdx = source.findIndex(r => new Date(r.date) >= today);
-  if (baseIdx < 0) baseIdx = source.length - 3;
+  let baseIdx = SEL_ROTATION.findIndex(r => new Date(r.date) >= today);
+  if (baseIdx < 0) baseIdx = SEL_ROTATION.length - 3;
   baseIdx = Math.max(0, baseIdx);
 
   // 每次顯示 3 週，最多往後涵蓋 5 週（0~4）
@@ -3280,15 +3229,14 @@ function renderSelRotation() {
   _selRotPage = Math.max(0, Math.min(_selRotPage, maxPage));
 
   const sliceStart = baseIdx + _selRotPage * pageSize;
-  const sliceEnd = Math.min(sliceStart + pageSize, baseIdx + windowSize, source.length);
-  const rows = source.slice(sliceStart, sliceEnd);
+  const sliceEnd = Math.min(sliceStart + pageSize, baseIdx + windowSize, SEL_ROTATION.length);
+  const rows = SEL_ROTATION.slice(sliceStart, sliceEnd);
 
   // 計算本組標籤（第幾週相對於 baseIdx）
   const offsetBase = _selRotPage * pageSize; // 0, 3, 6…
   const weekLabels = ['本週', '下週', '再下週', '第4週', '第5週'];
 
-  const banner = usingPlaceholder ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">${_ROTATION_PLACEHOLDER_NOTE}</div>` : '';
-  el.innerHTML = banner + rows.map((r, i) => {
+  el.innerHTML = rows.map((r, i) => {
     const c = SEL_THEME_COLOR[r.theme] || { bg:'#f1f5f9', text:'#475569', border:'#cbd5e1' };
     const globalOffset = offsetBase + i;
     const isNow = globalOffset === 0;
@@ -3315,7 +3263,7 @@ function renderSelRotation() {
   // 更新翻頁按鈕
   if (navEl) {
     const hasPrev = _selRotPage > 0;
-    const hasNext = _selRotPage < maxPage && sliceEnd < baseIdx + windowSize && sliceEnd < source.length;
+    const hasNext = _selRotPage < maxPage && sliceEnd < baseIdx + windowSize && sliceEnd < SEL_ROTATION.length;
     navEl.innerHTML = `
       <button onclick="_selRotPage--;renderSelRotation()" style="padding:4px 14px;border-radius:8px;border:1px solid #cbd5e1;background:${hasPrev?'#fff':'#f1f5f9'};color:${hasPrev?'#1e293b':'#94a3b8'};cursor:${hasPrev?'pointer':'default'};font-size:13px" ${hasPrev?'':'disabled'}>← 上一組</button>
       <span style="font-size:12px;color:#94a3b8">第 ${_selRotPage+1} / ${maxPage+1} 組</span>
@@ -3404,133 +3352,52 @@ function _currentSemesterRange() {
   }
 }
 
-const SEL_PLAN_DOMAINS = [
-  {label:'自我覺察',  color:'#534AB7',bg:'#EEEDFE'},
-  {label:'自我管理',  color:'#0F6E56',bg:'#E1F5EE'},
-  {label:'社會覺察',  color:'#185FA5',bg:'#E6F1FB'},
-  {label:'關係技巧',  color:'#854F0B',bg:'#FAEEDA'},
-  {label:'負責任的決定',color:'#993C1D',bg:'#FAECE7'},
-];
-
-// 依學年度／學期存放各學期的課程規劃，尚未建立的學期不放資料即可（會自動顯示待填空白狀態）
-const SEL_PLAN_DATA = {
-  '115': {
-    '上學期': {
-      // 115上學期各班導師（與114下相比，1-2、3-4、5-6年級導師互調）
-      classes: [
-        {g:1,name:'1甲',teacher:'楊凱棋'},
-        {g:2,name:'2甲',teacher:'蔡幸華'},
-        {g:3,name:'3甲',teacher:'王瑞明'},
-        {g:4,name:'4甲',teacher:'黃于玲'},
-        {g:5,name:'5甲',teacher:'吳惠雅'},
-        {g:6,name:'6甲',teacher:'王怡文'},
-      ],
-      // 115上學期教案尚未上傳（Drive 教案資料夾各班均為空），待建立後於此補上 rows
-      rows: [],
-    },
-  },
-  '114': {
-    '下學期': {
-      classes: [
-        {g:1,name:'1甲',teacher:'蔡幸華'},
-        {g:2,name:'2甲',teacher:'楊凱棋'},
-        {g:3,name:'3甲',teacher:'黃于玲'},
-        {g:4,name:'4甲',teacher:'王瑞明'},
-        {g:5,name:'5甲',teacher:'王怡文'},
-        {g:6,name:'6甲',teacher:'吳惠雅'},
-      ],
-      examBanner: {beforeIndex:4, text:'── 期中考週（3/30–4/11）暫停 SEL ──'},
-      // c: [[lesson,done],...] done=1=有省思記錄 done=0=待填/連結
-      rows: [
-        {wk:'週1', dates:'3/2–3/7',   ws:'2026-03-02',di:0,
-         c:[['認識生氣與情緒管理',1],['情緒六精靈',1],['我腦中的其他想法',1],['察覺過去難→現在容易',1],['優點大搜索',1],['呼吸覺察・身體放鬆',1]]},
-        {wk:'週2', dates:'3/9–3/13',  ws:'2026-03-09',di:0,
-         c:[['情緒六精靈',1],['憤怒量表',1],['這就是我',1],['察覺情緒/壓力',1],['別人眼中的我・言語的力量',1],['我的情緒環',1]]},
-        {wk:'週3', dates:'3/16–3/20', ws:'2026-03-16',di:1,
-         c:[['感受紅綠燈',1],['河豚帕菲',1],['情緒在大腦旅行',1],['情緒調節運動',1],['愛分享的蝴蝶',1],['情緒寶盒製作',1]]},
-        {wk:'週4', dates:'3/23–3/27', ws:'2026-03-23',di:1,
-         c:[['毛毛蟲慢慢走',1],['節節進步',1],['與憤怒對話',1],['情緒在大腦旅行',1],['情緒紅綠燈・蘇珊大嬸',1],['畢旅前的自我管理',1]]},
-        {wk:'週5', dates:'4/13–4/17', ws:'2026-04-13',di:2,
-         c:[['不同的劇本',1],['不同的劇本',1],['行程當中的衝突',1],['愛分享的蝴蝶',1],['失落的時刻',1],['社會覺察',0]]},
-        {wk:'週6', dates:'4/20–4/24', ws:'2026-04-20',di:2,
-         c:[['放大鏡視角',1],['不同的劇本（續）',1],['別人怎麼了？',1],['愛分享的蝴蝶（續）',1],['畢旅行程規劃',1],['',0]]},
-        {wk:'週7', dates:'4/27–5/1',  ws:'2026-04-27',di:3,
-         c:[['',0],['練習創造雙贏',1],['打氣三部曲',1],['角度不同看法也不同',1],['',0],['',0]]},
-        {wk:'週8', dates:'5/4–5/8',   ws:'2026-05-04',di:3,
-         c:[['',0],['',0],['練習創造雙贏',1],['',0],['',0],['',0]]},
-        {wk:'週9', dates:'5/11–5/15', ws:'2026-05-11',di:4,
-         c:[['',0],['',0],['我這週的目標',0],['',0],['',0],['',0]]},
-        {wk:'週10',dates:'5/18–5/22', ws:'2026-05-18',di:4,
-         c:[['',0],['',0],['我會負責任',0],['',0],['',0],['',0]]},
-      ]
-    }
-  }
-};
-
-// 目前顯示的學年度／學期，預設對齊儀表板自動計算出的目前學期
-let _selPlanYear = String(SCHOOL_YEAR);
-let _selPlanSem  = SEMESTER + '學期';
-
-function _selPlanYearList() {
-  const years = new Set(Object.keys(SEL_PLAN_DATA).map(Number));
-  years.add(SCHOOL_YEAR); years.add(SCHOOL_YEAR - 1); years.add(SCHOOL_YEAR + 1);
-  return [...years].sort((a,b)=>b-a).map(String);
-}
-function renderSelPlanTabs() {
-  const yearTabs = document.getElementById('selPlanYearTabs');
-  const semTabs  = document.getElementById('selPlanSemTabs');
-  if (!yearTabs || !semTabs) return;
-  yearTabs.innerHTML = _selPlanYearList().map(y =>
-    `<button class="meeting-tab${y===_selPlanYear?' active':''}" onclick="switchSelPlanYear('${y}',this)">${y}學年度</button>`
-  ).join('');
-  semTabs.innerHTML = ['上學期','下學期'].map(s =>
-    `<button class="meeting-sem-tab${s===_selPlanSem?' active':''}" onclick="switchSelPlanSem('${s}',this)">${s}</button>`
-  ).join('');
-}
-function switchSelPlanYear(year, el) {
-  _selPlanYear = year;
-  document.querySelectorAll('#selPlanYearTabs .meeting-tab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  renderSelCurriculumTable();
-}
-function switchSelPlanSem(sem, el) {
-  _selPlanSem = sem;
-  document.querySelectorAll('#selPlanSemTabs .meeting-sem-tab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  renderSelCurriculumTable();
-}
-
 function renderSelCurriculumTable() {
-  renderSelPlanTabs();
-  const container = document.getElementById('selCurriculumTable');
-  const data = SEL_PLAN_DATA[_selPlanYear] && SEL_PLAN_DATA[_selPlanYear][_selPlanSem];
-
-  if (!data || !data.rows || !data.rows.length) {
-    const classList = data && data.classes && data.classes.length
-      ? `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px">${
-          data.classes.map(c => `<span class="badge" style="background:#f1f5f9;color:#475569">${c.name} ${c.teacher}</span>`).join('')
-        }</div>`
-      : '';
-    container.innerHTML = `<div class="empty-state" style="padding:30px 10px">
-      <div class="icon">📚</div>
-      <div>${_selPlanYear}學年度${_selPlanSem}尚未建立 SEL 校本課程規劃</div>
-      ${classList}
-      <a href="https://drive.google.com/drive/folders/1G6DqtLiE9vW8ofGiDOSTs2Vu4acrg8We" target="_blank" class="btn btn-outline btn-sm" style="margin-top:10px;text-decoration:none;display:inline-block">📂 前往 Drive 教案資料夾建立</a>
-    </div>`;
-    return;
-  }
-
-  const nowStr  = today.toISOString().slice(0,10);
-  const classes = data.classes;
-  const rows    = data.rows;
-  const semRange = getSemesterRange(Number(_selPlanYear), _selPlanSem==='上學期'?'上':'下');
-  const semEndStr = semRange.end.toISOString().slice(0,10);
+  const nowStr = today.toISOString().slice(0,10);
+  const domains = [
+    {label:'自我覺察',  color:'#534AB7',bg:'#EEEDFE'},
+    {label:'自我管理',  color:'#0F6E56',bg:'#E1F5EE'},
+    {label:'社會覺察',  color:'#185FA5',bg:'#E6F1FB'},
+    {label:'關係技巧',  color:'#854F0B',bg:'#FAEEDA'},
+    {label:'負責任的決定',color:'#993C1D',bg:'#FAECE7'},
+  ];
+  const classes = [
+    {g:1,name:'1甲',teacher:'蔡幸華'},
+    {g:2,name:'2甲',teacher:'楊凱棋'},
+    {g:3,name:'3甲',teacher:'黃于玲'},
+    {g:4,name:'4甲',teacher:'王瑞明'},
+    {g:5,name:'5甲',teacher:'王怡文'},
+    {g:6,name:'6甲',teacher:'吳惠雅'},
+  ];
+  // c: [[lesson,done],...] done=1=有省思記錄 done=0=待填/連結
+  const rows = [
+    {wk:'週1', dates:'3/2–3/7',   ws:'2026-03-02',di:0,
+     c:[['認識生氣與情緒管理',1],['情緒六精靈',1],['我腦中的其他想法',1],['察覺過去難→現在容易',1],['優點大搜索',1],['呼吸覺察・身體放鬆',1]]},
+    {wk:'週2', dates:'3/9–3/13',  ws:'2026-03-09',di:0,
+     c:[['情緒六精靈',1],['憤怒量表',1],['這就是我',1],['察覺情緒/壓力',1],['別人眼中的我・言語的力量',1],['我的情緒環',1]]},
+    {wk:'週3', dates:'3/16–3/20', ws:'2026-03-16',di:1,
+     c:[['感受紅綠燈',1],['河豚帕菲',1],['情緒在大腦旅行',1],['情緒調節運動',1],['愛分享的蝴蝶',1],['情緒寶盒製作',1]]},
+    {wk:'週4', dates:'3/23–3/27', ws:'2026-03-23',di:1,
+     c:[['毛毛蟲慢慢走',1],['節節進步',1],['與憤怒對話',1],['情緒在大腦旅行',1],['情緒紅綠燈・蘇珊大嬸',1],['畢旅前的自我管理',1]]},
+    {wk:'週5', dates:'4/13–4/17', ws:'2026-04-13',di:2,
+     c:[['不同的劇本',1],['不同的劇本',1],['行程當中的衝突',1],['愛分享的蝴蝶',1],['失落的時刻',1],['社會覺察',0]]},
+    {wk:'週6', dates:'4/20–4/24', ws:'2026-04-20',di:2,
+     c:[['放大鏡視角',1],['不同的劇本（續）',1],['別人怎麼了？',1],['愛分享的蝴蝶（續）',1],['畢旅行程規劃',1],['',0]]},
+    {wk:'週7', dates:'4/27–5/1',  ws:'2026-04-27',di:3,
+     c:[['',0],['練習創造雙贏',1],['打氣三部曲',1],['角度不同看法也不同',1],['',0],['',0]]},
+    {wk:'週8', dates:'5/4–5/8',   ws:'2026-05-04',di:3,
+     c:[['',0],['',0],['練習創造雙贏',1],['',0],['',0],['',0]]},
+    {wk:'週9', dates:'5/11–5/15', ws:'2026-05-11',di:4,
+     c:[['',0],['',0],['我這週的目標',0],['',0],['',0],['',0]]},
+    {wk:'週10',dates:'5/18–5/22', ws:'2026-05-18',di:4,
+     c:[['',0],['',0],['我會負責任',0],['',0],['',0],['',0]]},
+  ];
 
   let html = `<div style="overflow-x:auto">
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:#64748b;align-items:center">
     <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#d1fae5;border:1px solid #6ee7b7;display:inline-block"></span>有省思記錄</span>
     <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f1f5f9;border:1px solid #e2e8f0;display:inline-block"></span>待填寫／連結</span>
-    <a href="https://drive.google.com/drive/folders/1G6DqtLiE9vW8ofGiDOSTs2Vu4acrg8We" target="_blank" style="margin-left:auto;color:#3b82f6;font-size:11px;text-decoration:none">📂 Drive 教案資料夾 →</a>
+    <a href="https://drive.google.com/drive/folders/1KpXxwEdl2nbnwAVy7fQgGo37IID1GVdy" target="_blank" style="margin-left:auto;color:#3b82f6;font-size:11px;text-decoration:none">📂 Drive 教案資料夾 →</a>
   </div>
   <table style="width:100%;border-collapse:collapse;font-size:12px">
     <thead>
@@ -3544,9 +3411,9 @@ function renderSelCurriculumTable() {
     <tbody>`;
 
   rows.forEach((row,ri) => {
-    if (data.examBanner && ri===data.examBanner.beforeIndex) html += `<tr><td colspan="${3+classes.length}" style="padding:5px 10px;border:1px solid #e2e8f0;background:#faf5ff;font-size:11px;color:#7e22ce;text-align:center;font-style:italic">${data.examBanner.text}</td></tr>`;
-    const dom = SEL_PLAN_DOMAINS[row.di];
-    const nextWs = rows[ri+1]?.ws || semEndStr;
+    if (ri===4) html += `<tr><td colspan="9" style="padding:5px 10px;border:1px solid #e2e8f0;background:#faf5ff;font-size:11px;color:#7e22ce;text-align:center;font-style:italic">── 期中考週（3/30–4/11）暫停 SEL ──</td></tr>`;
+    const dom = domains[row.di];
+    const nextWs = rows[ri+1]?.ws || '2026-06-30';
     const isCurrent = nowStr >= row.ws && nowStr < nextWs;
     const isPast = row.ws < nowStr && !isCurrent;
     const rowBg = isCurrent ? '#fffbeb' : (isPast ? '#ffffff' : '#f9fafb');
@@ -3573,7 +3440,7 @@ function renderSelCurriculumTable() {
   html += `</tbody></table>
   <div style="margin-top:6px;font-size:11px;color:#94a3b8">完整省思記錄請至各班 Google 表單查看・資料來源：Google Drive SEL校本教案資料夾</div>
   </div>`;
-  container.innerHTML = html;
+  document.getElementById('selCurriculumTable').innerHTML = html;
 }
 
 function openSelModal() {
@@ -4122,8 +3989,6 @@ const weeklyCalData = [
 function renderDrivePage() {
   const tbody = document.getElementById('calWeeklyBody');
   if(!tbody) return;
-  const titleEl = document.getElementById('calWeeklyTitle');
-  if (titleEl) titleEl.textContent = `${SCHOOL_YEAR}學年度第${SEMESTER==='上'?'一':'二'}學期行事曆週次總覽`;
   tbody.innerHTML = weeklyCalData.map(w=>`<tr>
     <td style="text-align:center;font-weight:700;min-width:36px">${w.wk==='0'?'假期':w.wk}</td>
     <td style="white-space:nowrap;font-size:12px;color:#64748b">${w.dates}</td>
@@ -4151,8 +4016,8 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   // Load persisted data from localStorage (fast, instant)
   loadData();
 
-  // Firebase 即時同步監聽（Google 登入完成後才由 auth 回呼啟動）
-  window._startFirebaseSync = () => _fbRef.on('value', snapshot => {
+  // Firebase 即時同步監聽
+  _fbRef.on('value', snapshot => {
     const d = snapshot.val();
     if(!d) {
       // Firebase 尚無資料，把本機資料上傳
@@ -4168,6 +4033,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
     if(d.nextId    !== undefined) { Object.assign(nextId, d.nextId||{}); localStorage.setItem('ck_nextId', JSON.stringify(nextId)); }
     if(d.nextStaffId!==undefined) { nextStaffId = d.nextStaffId;  localStorage.setItem('ck_nextStaffId', String(nextStaffId)); }
     if(d.grades    !== undefined) { grades = d.grades||[];         gradeNextId = d.gradeNextId||1; localStorage.setItem('cksch_grades', JSON.stringify({ data: grades, nextId: gradeNextId })); }
+    if(d.dutyEdits !== undefined) { dutyEdits = d.dutyEdits||{};  localStorage.setItem('ck_duty_edits', JSON.stringify(dutyEdits)); }
     _fbSyncing = false;
     // 重新渲染目前頁面
     try { renderDashboard(); } catch(e){}
@@ -4181,21 +4047,14 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
         if(pid==='page-grades')   renderGradesPage && renderGradesPage();
         if(pid==='page-admin')    renderAdminTable && renderAdminTable();
         if(pid==='page-sel')      renderSelPage && renderSelPage();
+        if(pid==='page-duty')     renderDutyTable && renderDutyTable();
       }
     } catch(e){}
   }, err => console.warn('Firebase listener error:', err));
-  // auth 若已先完成登入，這裡補啟動同步
-  _kickSyncIfReady();
 
   // 學期徽章
   document.getElementById('semBadge').textContent    = SEM_LABEL;
   document.getElementById('navSemBadge').textContent = SEM_LABEL;
-
-  // 儀表板右側：週次（由 GAS 檔名解析，先顯示 --）
-  (function renderDashDateWeek() {
-    const el = document.getElementById('dashDateWeek');
-    if (el) el.textContent = '第 -- 週';
-  })();
 
   // Top bar date
   const days = ['日','一','二','三','四','五','六'];
@@ -4547,21 +4406,8 @@ async function loadMammoth() {
 
 // ── 自動載入最近兩週夕會摘要 ──────────────────────────────────
 // 每次開啟會議記錄頁 + 行事曆同步後自動執行
-// 資料夾依目前學年度／學期自動取用（MEETING_FOLDERS），不再寫死學期
-function _recentMtgFolder() {
-  const folders = getMeetingFolders();
-  const semData = folders[String(SCHOOL_YEAR)] && folders[String(SCHOOL_YEAR)][SEMESTER + '學期'];
-  return semData && semData['📅 每週夕會'];
-}
-
-// 檔名 "第N週-MMDD.docx" 的 MMDD → 依目前學期換算實際日期（上學期跨年：8-12月屬前一年，1月屬次一年）
-function _mmddToDate(mmdd) {
-  const mo = Math.floor(mmdd / 100), da = mmdd % 100;
-  const yr = mo >= 8 ? SCHOOL_YEAR + 1911 : SCHOOL_YEAR + 1912;
-  const d = new Date(yr, mo - 1, da);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+// 目前學期資料夾：114下 / 每週夕會
+const RECENT_MTG_FOLDER = '1FAb8TBPYhbroQIigcUYjHqzasAX20sC6';
 
 async function autoLoadRecentMeetings() {
   // 只在會議頁面可見時執行
@@ -4573,18 +4419,12 @@ async function autoLoadRecentMeetings() {
   const lastUl   = document.getElementById('rmtgLastPoints');
   if (!thisUl || !lastUl) return;
 
-  const folderId = _recentMtgFolder();
-  if (!folderId) {
-    thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#94a3b8">本學期尚未建立每週夕會資料夾</li>';
-    return;
-  }
-
   thisUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
   lastUl.innerHTML = '<li style="color:#94a3b8">⏳ 從 Drive 載入...</li>';
 
   try {
     // 1. 取最近 10 筆 .docx，依修改時間排序
-    const q   = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const q   = encodeURIComponent(`'${RECENT_MTG_FOLDER}' in parents and trashed=false`);
     const url = `https://www.googleapis.com/drive/v3/files?q=${q}`
               + `&fields=files(id,name,mimeType,webViewLink,modifiedTime)`
               + `&orderBy=modifiedTime+desc&pageSize=10`;
@@ -4592,49 +4432,34 @@ async function autoLoadRecentMeetings() {
     const data = await res.json();
     if (data.error) { thisUl.innerHTML = lastUl.innerHTML = '<li style="color:#ef4444">Drive 存取失敗</li>'; return; }
 
+    // 今天的 MMDD（例：5/14 → 514）
+    const _now   = new Date();
+    const todayMMDD = (_now.getMonth() + 1) * 100 + _now.getDate();
     // 從檔名 "第N週-MMDD.docx" 取出 MMDD（連字號後的4位數）
     const getMMDD = n => { const m = n.match(/[-_](\d{4})(?:\.docx)?/i); return m ? +m[1] : 0; };
 
-    // 以右上方顯示的「今天」為準，換算本週（週日～週五）與上週的日期範圍
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const curSun = new Date(SEM_WEEK1_START);
-    curSun.setDate(curSun.getDate() + (weekNumberFromDate(today.toISOString()) - 1) * 7);
-    const curFri = new Date(curSun); curFri.setDate(curFri.getDate() + 5);
-    const lastSun = new Date(curSun); lastSun.setDate(lastSun.getDate() - 7);
-    const lastFri = new Date(curFri); lastFri.setDate(lastFri.getDate() - 7);
-    const inRange = (d, s, e) => d >= s && d <= e;
-
+    // 只留 .docx，且 MMDD ≤ 今天（排除未來空白範本）
     const docs = (data.files || [])
-      .filter(f => f.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-      .map(f => ({ ...f, _mmdd: getMMDD(f.name) }))
-      .filter(f => f._mmdd > 0)
-      .map(f => ({ ...f, _date: _mmddToDate(f._mmdd) }));
+      .filter(f => {
+        if (f.mimeType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return false;
+        const mmdd = getMMDD(f.name);
+        return mmdd > 0 && mmdd <= todayMMDD;
+      })
+      .sort((a, b) => getMMDD(b.name) - getMMDD(a.name)); // 最新在前
 
-    const thisWeekDoc = docs.find(f => inRange(f._date, curSun, curFri));
-    const lastWeekDoc = docs.find(f => inRange(f._date, lastSun, lastFri));
-
-    const emptyCard = (titleId, ulId, linkId, label) => {
-      document.getElementById(titleId).textContent = label;
-      document.getElementById(ulId).innerHTML = '<li style="color:#94a3b8">（尚未上傳本週紀錄）</li>';
-      const a = document.getElementById(linkId);
-      if (a) a.style.display = 'none';
-    };
+    if (docs.length === 0) { thisUl.innerHTML = '<li style="color:#94a3b8">尚無 .docx 檔案</li>'; return; }
 
     // 手機版：直接顯示連結，不解析（省頻寬）
     if (_IS_MOBILE) {
-      thisWeekDoc ? fillCardMobile(thisWeekDoc, 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink')
-                  : emptyCard('rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink', '本週');
-      lastWeekDoc ? fillCardMobile(lastWeekDoc, 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink')
-                  : emptyCard('rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink', '上週');
+      fillCardMobile(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
+      if (docs[1]) fillCardMobile(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
       return;
     }
 
     // 電腦版：載入 mammoth.js 並解析內容
     await loadMammoth();
-    thisWeekDoc ? await fillCardDesktop(thisWeekDoc, 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink')
-                : emptyCard('rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink', '本週');
-    lastWeekDoc ? await fillCardDesktop(lastWeekDoc, 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink')
-                : emptyCard('rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink', '上週');
+    await fillCardDesktop(docs[0], 'rmtgThisTitle', 'rmtgThisPoints', 'rmtgThisLink');
+    if (docs[1]) await fillCardDesktop(docs[1], 'rmtgLastTitle', 'rmtgLastPoints', 'rmtgLastLink');
 
   } catch (e) {
     console.warn('autoLoadRecentMeetings:', e);
@@ -4713,13 +4538,6 @@ function escHtml(s) {
 }
 
 const MEETING_FOLDERS = {
-  '116': { '上學期': {}, '下學期': {} },
-  '115': {
-    '上學期': {
-      '📅 每週夕會': '1F9RPv-Sk9tGujcIOdQgqHP0VeXo-rh9Z',
-    },
-    '下學期': {}
-  },
   '114': {
     '上學期': {
       '📋 校務會議': '1Kks4LjnNH7B84nu205Az4mZDhNR5d93M',
@@ -4748,64 +4566,9 @@ const MEETING_EXTRA = {
     webViewLink: 'https://drive.google.com/file/d/1xSPU9IdN_3nBDLE9yi1UFF-NPq28Ql3n/view', modifiedTime: '2025-01-20' }] }
 };
 
-let _meetingYear  = '115';
-let _meetingSem   = '上學期';
+let _meetingYear  = '114';
+let _meetingSem   = '下學期';
 let _meetingCache = {}; // folderId → files[]
-
-// ── 手動新增學年度／資料夾（存於瀏覽器 localStorage，不需改程式碼）──
-const MEETING_EXTRA_KEY = 'ck_meeting_extra_folders';
-function _loadMeetingExtra() {
-  try { return JSON.parse(localStorage.getItem(MEETING_EXTRA_KEY)) || {}; }
-  catch { return {}; }
-}
-function _saveMeetingExtra(extra) {
-  localStorage.setItem(MEETING_EXTRA_KEY, JSON.stringify(extra));
-}
-function getMeetingFolders() {
-  const extra  = _loadMeetingExtra();
-  const merged = {};
-  for (const y of new Set([...Object.keys(MEETING_FOLDERS), ...Object.keys(extra)])) {
-    merged[y] = {
-      '上學期': { ...(MEETING_FOLDERS[y]?.['上學期']), ...(extra[y]?.['上學期']) },
-      '下學期': { ...(MEETING_FOLDERS[y]?.['下學期']), ...(extra[y]?.['下學期']) },
-    };
-  }
-  return merged;
-}
-function addMeetingYear() {
-  const year = prompt('請輸入要新增的學年度（例如：117）：');
-  if (!year || !/^\d{3}$/.test(year.trim())) { if (year) alert('請輸入 3 碼學年度數字，例如 117'); return; }
-  const y = year.trim();
-  if (document.querySelector(`#meetingYearTabs .meeting-tab[data-year="${y}"]`)) {
-    alert(`${y}學年度已存在`); return;
-  }
-  const extra = _loadMeetingExtra();
-  if (!extra[y]) extra[y] = { '上學期': {}, '下學期': {} };
-  _saveMeetingExtra(extra);
-
-  const btn = document.createElement('button');
-  btn.className = 'meeting-tab';
-  btn.dataset.year = y;
-  btn.textContent = `${y}學年度`;
-  btn.onclick = () => switchMeetingYear(y, btn);
-  const addBtn = document.querySelector('#meetingYearTabs .meeting-tab:last-child');
-  document.getElementById('meetingYearTabs').insertBefore(btn, addBtn);
-  switchMeetingYear(y, btn);
-}
-function addMeetingFolder() {
-  const typeName = prompt('資料夾名稱（例如：📋 校務會議 或 📅 每週夕會）：');
-  if (!typeName) return;
-  const raw = prompt('Google Drive 資料夾 ID 或分享連結：');
-  if (!raw) return;
-  const m = raw.match(/[-\w]{25,}/);
-  const folderId = m ? m[0] : raw.trim();
-  const extra = _loadMeetingExtra();
-  if (!extra[_meetingYear]) extra[_meetingYear] = { '上學期': {}, '下學期': {} };
-  if (!extra[_meetingYear][_meetingSem]) extra[_meetingYear][_meetingSem] = {};
-  extra[_meetingYear][_meetingSem][typeName] = folderId;
-  _saveMeetingExtra(extra);
-  renderMeetingContent();
-}
 
 function switchMeetingYear(year, el) {
   _meetingYear = year;
@@ -4835,13 +4598,11 @@ async function renderMeetingContent() {
   }
   if (authNotice) authNotice.style.display = 'none';
 
-  const yearData = getMeetingFolders()[_meetingYear];
+  const yearData = MEETING_FOLDERS[_meetingYear];
   const semData  = yearData && yearData[_meetingSem];
 
-  const addBtnHtml = `<button class="btn btn-outline btn-sm" onclick="addMeetingFolder()" style="margin-top:10px">➕ 手動新增資料夾</button>`;
-
   if (!semData || Object.keys(semData).length === 0) {
-    content.innerHTML = `<div class="empty-state"><div class="icon">📂</div><div>此學期尚無建立資料夾</div>${addBtnHtml}</div>`;
+    content.innerHTML = `<div class="empty-state"><div class="icon">📂</div><div>此學期尚無建立資料夾</div></div>`;
     return;
   }
 
@@ -4849,12 +4610,7 @@ async function renderMeetingContent() {
 
   let html = '';
   for (const [typeName, folderId] of Object.entries(semData)) {
-    let files = await getMeetingFiles(folderId);
-    // 依修改時間換算週次，按週次由新到舊排序，讓當週內容排在最前面
-    if (_meetingYear === String(SCHOOL_YEAR) && _meetingSem === (SEMESTER + '學期')) {
-      files = files.map(f => ({ ...f, _week: weekNumberFromDate(f.modifiedTime) }))
-                   .sort((a, b) => (b._week ?? -1) - (a._week ?? -1));
-    }
+    const files = await getMeetingFiles(folderId);
     const cards = files.length
       ? files.map(f => meetingFileCard(f)).join('')
       : '<div style="color:#94a3b8;font-size:13px;padding:8px 0">（尚無檔案）</div>';
@@ -4863,18 +4619,8 @@ async function renderMeetingContent() {
       <div class="meeting-file-grid">${cards}</div>
     </div>`;
   }
-  html += `<div style="margin-top:6px">${addBtnHtml}</div>`;
   content.innerHTML = html || '<div class="empty-state"><div class="icon">📂</div><div>沒有找到檔案</div></div>';
 }
-
-// 依日期換算屬於本學期第幾週（以 SEM_WEEK1_START 起算，每7天一週，與圍圈輪值表週次一致）
-function weekNumberFromDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (d < SEM_START || d > SEM_END) return null;
-  return Math.floor((d - SEM_WEEK1_START) / 604800000) + 1;
-}
-const _CURRENT_WEEK_NO = weekNumberFromDate(new Date().toISOString());
 
 function meetingFileCard(f) {
   const icon = f.mimeType === 'application/pdf' ? '📄'
@@ -4886,15 +4632,10 @@ function meetingFileCard(f) {
   const date = f.modifiedTime
     ? new Date(f.modifiedTime).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
     : '';
-  const wk = f._week !== undefined ? f._week : weekNumberFromDate(f.modifiedTime);
-  const isCurrentWeek = wk !== null && wk === _CURRENT_WEEK_NO;
-  const wkBadge = wk !== null
-    ? `<span style="background:${isCurrentWeek ? '#2563eb' : '#e2e8f0'};color:${isCurrentWeek ? '#fff' : '#475569'};font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px">第${wk}週${isCurrentWeek ? '・本週' : ''}</span>`
-    : '';
-  return `<a class="meeting-file-card" href="${f.webViewLink}" target="_blank" title="${name}"${isCurrentWeek ? ' style="border-color:#2563eb;box-shadow:0 0 0 1px #2563eb"' : ''}>
+  return `<a class="meeting-file-card" href="${f.webViewLink}" target="_blank" title="${name}">
     <span class="meeting-file-icon">${icon}</span>
     <div>
-      <div class="meeting-file-name">${name}${wkBadge}</div>
+      <div class="meeting-file-name">${name}</div>
       <div class="meeting-file-meta">${ext}${date ? ' · 修改：' + date : ''}</div>
     </div>
   </a>`;
@@ -4914,289 +4655,154 @@ async function getMeetingFiles(folderId) {
   } catch (e) { console.warn('Drive fetch error:', e); return []; }
 }
 
+
+// ── DUTY PAGE ──
+const dutyStaffDefault = [
+  {no:1,name:'陳彥揚',title:'校長',unit:'校長室',duties:'綜理校務、教學視導',tags:['校務總覽','教學視導']},
+  {no:2,name:'黃雅玲',title:'教導主任',unit:'教導處',duties:'一般行政、教導業務之計畫申請、執行與檢核、週三進修規劃、教師研習安排、教育優先區計畫申請、核銷及成果填報、各項藝文教育專案【活化計畫子3教師社群及子4學生多元社團：舞蹈、書法、扯鈴、鋼琴、週三課後照顧班及戶外教育、精湛教育基金會藝文(繪畫)教育、藝術深耕書法課程、全聯佩樺基金會-吉他社團】規劃執行及成果填報、數位學習推動計畫、偏遠地區學校及非山非市學校整合性計畫、過港新住民計畫（親子講座）、夜光天使計畫申請執行及成果填報、甄選代理(課)教師事宜、研習派代、寒暑假作業敘獎案、學期及寒暑假行事曆安排等，其他臨時交辦事項。',tags:['進修規劃','藝文教育','夜光天使','行事曆']},
+  {no:3,name:'陳英曉',title:'總務主任',unit:'總務處',duties:'總務業務之計畫申請、執行與檢核，財務（物）購置、工友、校園安全管理、校園綠美化規劃管理、環境教育、家長會管理、校園災害管理（硬體部份）、校安通報（天然災害、校產部份）、經費控管（會計、出納協助）、兒福經濟及物資補助，★兼任網管業務及資訊教育檢核表及其他臨時交辦事項。',tags:['總務','校園安全','網管','家長會']},
+  {no:4,name:'邱瀅錦',title:'幹事兼辦人事兼辦主計',unit:'教導處',duties:'人事業務、主計業務及其他臨時交辦事項。',tags:['人事','主計']},
+  {no:5,name:'蔡幸華',title:'二甲導師兼教務組長',unit:'教導處',duties:'教務業務、課程計畫、進度表彙整上傳及審查事項、課務編排、調整授課及導師費計畫(超鐘點)、成績評量辦法與執行（頒獎）、學藝及藝文活動及校內外各項比賽規劃（含國語文競賽）、各項教務宣導教育、註冊(含新生入學相關資訊)、學籍管理、教科書、學務系統（課表、成績）管理、教具室管理、學生寒暑假作業展、補救教學、閱讀教育計畫及檢核表、低收入戶學產基金申請、榜單列印及張貼及其他臨時交辦事項。',tags:['課程計畫','成績評量','學籍管理','補救教學']},
+  {no:6,name:'林瑞芳',title:'科任兼訓導組長',unit:'教導處',duties:'訓導業務、環境教育填報系統、導護職務規劃、學生生活教育、性平業務、學生路隊、衛生交通安全教育、民主與法治教育、校內外學生活動規劃及執行與管理、校園整潔活動規劃、校安通報（暴力欺凌、濫用藥物、幫派、性侵、校內外活動）、品格教育、社團管理(包含兒福社團經費申請)及學生營隊、晨光活動，★兼輔老師、輔導業務、輔導行政及其他臨時交辦事項。',tags:['訓導','性平','品格教育','輔導','社團']},
+  {no:7,name:'楊凱琪',title:'二甲導師',unit:'教導處',duties:'出納業務及其他臨時交辦事項。',tags:['出納']},
+  {no:8,name:'王瑞明',title:'四甲導師',unit:'教導處',duties:'文書（收發文—電子資料歸檔、校務會議記錄…）及其他臨時交辦事項。',tags:['文書收發','會議記錄']},
+  {no:9,name:'黃于玲',title:'三甲導師',unit:'教導處',duties:'體育業務、體育室管理、有氧跆拳及跳繩指導、榜單列印及張貼，其他臨時交辦事項。',tags:['體育','跆拳','跳繩']},
+  {no:10,name:'吳惠雅',title:'六甲導師',unit:'教導處',duties:'教育儲蓄戶、學生各項獎助學金、支援週一朝會拍照、各處室指導兒童繪畫比賽、協助兒福社團烏克麗麗檢定等相關活動、協助校園環境美工及海報布置、出納助理，其他臨時交辦事項。',tags:['獎助學金','拍照記錄','美工布置','出納助理']},
+  {no:11,name:'王怡文',title:'五甲導師',unit:'教導處',duties:'勞保、健保、二代健保及其他臨時交辦事項。',tags:['勞保','健保']},
+  {no:12,name:'張曉鈴',title:'科任教師',unit:'教導處',duties:'特教業務、圖書室管理及其他臨時交辦事項。',tags:['特教','圖書室']},
+  {no:13,name:'陳永芝',title:'科任教師',unit:'教導處',duties:'家庭教育、支援週五朝會拍照、英語教育（每週一句、指導英語演講比賽、英語相關活動）、教導處及總務處室業務支援及其他臨時交辦事項。',tags:['家庭教育','英語教育','拍照記錄']},
+  {no:14,name:'蔡淑真',title:'護理師兼午餐執秘',unit:'其他',duties:'師生保健、衛生業務、學生平安保險、午餐業務，其他臨時交辦事項。',tags:['保健','衛生','午餐','學生保險']},
+  {no:15,name:'陳建村',title:'工友',unit:'總務處',duties:'環境綠美化、飲水機維護與紀錄、一樓二樓處室管理及其他臨時交辦事項。',tags:['綠美化','飲水機','環境管理']}
+];
+
+// Load from shared dutyEdits (synced with Firebase)
+function dutyLoadData() {
+  return dutyStaffDefault.map(s => {
+    const e = dutyEdits[s.no];
+    return e ? Object.assign({}, s, e) : Object.assign({}, s);
+  });
+}
+
+function dutySaveEdit(no, field, val) {
+  if (!dutyEdits[no]) dutyEdits[no] = {};
+  dutyEdits[no][field] = val;
+  // Save to localStorage + Firebase via saveData()
+  try { localStorage.setItem('ck_duty_edits', JSON.stringify(dutyEdits)); } catch(e) {}
+  if (!_fbSyncing) {
+    _fbRef.update({ dutyEdits, _ts: Date.now() })
+      .catch(e => console.warn('Firebase duty save failed:', e));
+  }
+}
+
+let dutyStaff = dutyLoadData();
+
+const dutyUnitBadge = {
+  '校長室':'<span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700">🏅 校長室</span>',
+  '教導處':'<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700">📚 教導處</span>',
+  '總務處':'<span style="background:#dcfce7;color:#166534;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700">🔧 總務處</span>',
+  '其他':'<span style="background:#f3e8ff;color:#6b21a8;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700">🩺 其他</span>'
+};
+
+let dutyCurrentUnit = 'all', dutyCurrentSearch = '';
+
+function renderDutyTable() {
+  dutyStaff = dutyLoadData();
+  const tb = document.getElementById('dutyTableBody');
+  if (!tb) return;
+  tb.innerHTML = dutyStaff.map(s => {
+    const tags = s.tags.map(t=>`<span class="duty-tag">${t}</span>`).join(' ');
+    const short = s.duties.length > 55 ? s.duties.substring(0,55)+'…' : s.duties;
+    const hasMore = s.duties.length > 55;
+    return `<tr data-unit="${s.unit}" data-search="${s.name}${s.title}${s.duties}" data-no="${s.no}">
+      <td style="color:#94a3b8;font-size:12px">${s.no}</td>
+      <td style="font-weight:700;font-size:14px;white-space:nowrap">
+        <span class="duty-name-display" title="點兩下修改姓名" ondblclick="dutyStartEdit(this,${s.no},'name')" style="cursor:pointer;border-bottom:1px dashed #93c5fd;padding-bottom:1px">${s.name}</span>
+      </td>
+      <td style="font-size:12px;color:#475569;line-height:1.5">
+        <span class="duty-title-display" title="點兩下修改職稱" ondblclick="dutyStartEdit(this,${s.no},'title')" style="cursor:pointer;border-bottom:1px dashed #93c5fd;padding-bottom:1px;display:inline-block">${s.title}</span>
+      </td>
+      <td>${dutyUnitBadge[s.unit]||s.unit}</td>
+      <td style="font-size:12.5px;line-height:1.7;max-width:480px">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${tags}</div>
+        <div class="duty-short-${s.no}">${short}</div>
+        <div class="duty-full-${s.no}" style="display:none;color:#374151">${s.duties}</div>
+        ${hasMore?`<button class="duty-toggle" onclick="dutyToggle(${s.no},this)">▼ 展開完整業務</button>`:''}
+      </td></tr>`;
+  }).join('');
+  dutyApplyFilter();
+}
+
+// Inline edit: double-click to edit name or title
+function dutyStartEdit(span, no, field) {
+  if (span.querySelector('input')) return; // already editing
+  const current = span.textContent.trim();
+  const inp = document.createElement('input');
+  inp.value = current;
+  inp.style.cssText = 'border:2px solid #3b82f6;border-radius:6px;padding:2px 6px;font-size:13px;font-weight:700;width:80px;outline:none;font-family:inherit';
+  if (field === 'title') { inp.style.width = '140px'; inp.style.fontWeight = '400'; }
+  span.textContent = '';
+  span.appendChild(inp);
+  inp.focus();
+  inp.select();
+
+  function save() {
+    const val = inp.value.trim() || current;
+    span.textContent = val;
+    dutySaveEdit(no, field, val);
+    // Update data-search on the row
+    const row = span.closest('tr');
+    if (row) {
+      const s = dutyStaff.find(x=>x.no===no);
+      if (s) { s[field] = val; row.dataset.search = s.name + s.title + s.duties; }
+    }
+    dutyApplyFilter();
+  }
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e => { if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){inp.value=current;inp.blur();} });
+}
+
+function dutyToggle(no, btn) {
+  const s = document.querySelector('.duty-short-'+no);
+  const f = document.querySelector('.duty-full-'+no);
+  if(f.style.display==='none'){s.style.display='none';f.style.display='block';btn.textContent='▲ 收合';}
+  else{f.style.display='none';s.style.display='block';btn.textContent='▼ 展開完整業務';}
+}
+
+function dutyFilter(unit, btn) {
+  dutyCurrentUnit = unit;
+  document.querySelectorAll('.duty-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  dutyApplyFilter();
+}
+
+function dutySearchFn(val) {
+  dutyCurrentSearch = val.toLowerCase();
+  dutyApplyFilter();
+}
+
+function dutyApplyFilter() {
+  const rows = document.querySelectorAll('#dutyTableBody tr');
+  let v = 0;
+  rows.forEach(r => {
+    const um = dutyCurrentUnit==='all' || r.dataset.unit===dutyCurrentUnit;
+    const sm = !dutyCurrentSearch || r.dataset.search.toLowerCase().includes(dutyCurrentSearch);
+    if(um&&sm){r.classList.remove('duty-hidden');v++;}
+    else r.classList.add('duty-hidden');
+  });
+  const el = document.getElementById('dutyRowCount');
+  if(el) el.textContent = '共 '+v+' 筆';
+}
+
+// render when page is shown
+const _origShowPage = typeof showPage === 'function' ? showPage : null;
+document.addEventListener('DOMContentLoaded', ()=>{
+  const origSP = window.showPage;
+  window.showPage = function(id, el) {
+    origSP(id, el);
+    if(id==='duty') renderDutyTable();
+  };
+});
+
 </script>
 </body>
 </html>
-
-
-<!-- =============================================================
-     雲端同步模組  Cloud Sync  v1.1
-     localStorage  <->  Firebase Realtime Database
-     v1.1: 修正多裝置同時開啟時畫面不斷刷新的問題
-     ============================================================= -->
-<script>
-(function () {
-  'use strict';
-
-  /* ========== ① 設定 ========== */
-  const SYNC_PATH = 'lsSync';
-  const EXCLUDE = [
-    /pin/i, /key/i, /金鑰/, /token/i, /secret/i, /pass|pwd/i,
-    /cred/i, /oauth|gsi/i, /auth/i, /login/i, /__lsSync/,
-    // ck_* 與 cksch_* 已由 ckData 層即時同步，lsSync 不再重複鏡像（否則兩層互相觸發、無限同步）
-    /^ck_/, /^cksch_/
-  ];
-  const FIREBASE_CONFIG = null;
-  const RELOAD_COOLDOWN = 8000;
-  const RELOAD_DELAY    = 1200;
-
-  /* ========== ② 內部狀態 ========== */
-  const META_KEY  = '__lsSyncMeta';
-  const RELOAD_KEY = '__lsSyncReloadAt';
-  const nativeSet    = Storage.prototype.setItem;
-  const nativeRemove = Storage.prototype.removeItem;
-  let ref = null;
-  let applying = false;
-  const pushQueue = new Set();
-  let pushTimer = null, reloadTimer = null, ready = false;
-
-  function meta()      { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch (e) { return {}; } }
-  function saveMeta(m) { nativeSet.call(localStorage, META_KEY, JSON.stringify(m)); }
-  function isExcluded(k){ return !k || EXCLUDE.some(r => r.test(k)); }
-  function enc(k){ return btoa(unescape(encodeURIComponent(k))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
-  function dec(e){ e = e.replace(/-/g,'+').replace(/_/g,'/'); return decodeURIComponent(escape(atob(e))); }
-
-  /* ========== ③ 畫面小徽章 ========== */
-  const badge = document.createElement('div');
-  badge.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:99999;background:#1e293b;color:#fff;font:600 12px/1 "Microsoft JhengHei",sans-serif;padding:8px 12px;border-radius:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);user-select:none;opacity:.92';
-  badge.textContent = '☁️ 同步啟動中…';
-  function setBadge(t, bg){ badge.textContent = t; if (bg) badge.style.background = bg; }
-  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(badge));
-  if (document.body) document.body.appendChild(badge);
-  badge.addEventListener('click', () => {
-    if (!ready) return;
-    const c = prompt('雲端同步\n輸入 U = 以「本機」覆蓋雲端\n輸入 D = 以「雲端」覆蓋本機\n（一般情況不需要，直接關閉即可）');
-    if (c && c.toUpperCase() === 'U') forceUpload();
-    if (c && c.toUpperCase() === 'D') forceDownload();
-  });
-
-  /* ========== ④ 推送本機 -> 雲端 ========== */
-  function queuePush(k){ if (isExcluded(k)) return; pushQueue.add(k); schedulePush(); }
-  function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(flushPush, 300); }
-  function flushPush(){
-    if (!ready || !ref) { schedulePush(); return; }
-    if (pushQueue.size === 0) return;
-    const m = meta();
-    setBadge('☁️ 同步中…', '#2563eb');
-    let pending = pushQueue.size, failed = false;
-    pushQueue.forEach(k => {
-      const exists = localStorage.getItem(k);
-      const t = Date.now();
-      m[k] = t;
-      ref.child(enc(k)).set({ v: exists === null ? null : exists, t: t })
-        .catch(() => { failed = true; })
-        .finally(() => { if (--pending <= 0) setBadge(failed ? '⚠️ 同步失敗（檢查規則）' : '☁️ 已同步', failed ? '#ef4444' : '#10b981'); });
-    });
-    pushQueue.clear();
-    saveMeta(m);
-  }
-
-  /* ========== ⑤ 套用 雲端 -> 本機 ========== */
-  function applyRemote(k, remote){
-    if (isExcluded(k) || !remote || typeof remote.t !== 'number') return false;
-    const m = meta();
-    if (remote.t <= (m[k] || 0)) return false;
-    applying = true;
-    if (remote.v === null || remote.v === undefined) nativeRemove.call(localStorage, k);
-    else nativeSet.call(localStorage, k, remote.v);
-    applying = false;
-    m[k] = remote.t; saveMeta(m);
-    return true;
-  }
-
-  function scheduleReload(){
-    clearTimeout(reloadTimer);
-    reloadTimer = setTimeout(() => {
-      const el = document.activeElement;
-      const typing = (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName || '')) || (el && el.isContentEditable);
-      const modalOpen = [...document.querySelectorAll('.modal-overlay')].some(o => getComputedStyle(o).display !== 'none' && o.offsetParent !== null);
-      const last = +sessionStorage.getItem(RELOAD_KEY) || 0;
-      if (typing || modalOpen || (Date.now() - last < RELOAD_COOLDOWN)) {
-        showRefreshButton();
-      } else {
-        sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
-        location.reload();
-      }
-    }, RELOAD_DELAY);
-  }
-  let refreshBtn = null;
-  function showRefreshButton(){
-    if (refreshBtn) return;
-    refreshBtn = document.createElement('div');
-    refreshBtn.textContent = '☁️ 雲端有更新，點此重新整理';
-    refreshBtn.style.cssText = 'position:fixed;left:50%;bottom:60px;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#fff;font:600 13px/1 "Microsoft JhengHei",sans-serif;padding:10px 16px;border-radius:22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)';
-    refreshBtn.onclick = () => location.reload();
-    document.body.appendChild(refreshBtn);
-  }
-
-  /* ========== ⑥ 手動強制方向 ========== */
-  function forceUpload(){
-    if (!ref) return;
-    const m = meta(); const now = Date.now();
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (isExcluded(k)) continue;
-      m[k] = now;
-      ref.child(enc(k)).set({ v: localStorage.getItem(k), t: now });
-    }
-    saveMeta(m); setBadge('☁️ 已上傳本機', '#10b981');
-  }
-  function forceDownload(){
-    if (!ref) return;
-    ref.once('value').then(snap => {
-      const m = meta();
-      snap.forEach(ch => {
-        let k; try { k = dec(ch.key); } catch(e){ return; }
-        if (isExcluded(k)) return;
-        const r = ch.val() || {};
-        applying = true;
-        if (r.v === null || r.v === undefined) nativeRemove.call(localStorage, k);
-        else nativeSet.call(localStorage, k, r.v);
-        applying = false;
-        m[k] = Date.now();
-      });
-      saveMeta(m); location.reload();
-    });
-  }
-
-  /* ========== ⑦ 攔截 localStorage 寫入（值沒變就不推送） ========== */
-  Storage.prototype.setItem = function (k, v) {
-    const changed = this !== window.localStorage || this.getItem(k) !== v;
-    nativeSet.call(this, k, v);
-    if (this === window.localStorage && !applying && changed) queuePush(k);
-  };
-  Storage.prototype.removeItem = function (k) {
-    const had = this.getItem(k) !== null;
-    nativeRemove.call(this, k);
-    if (this === window.localStorage && !applying && had) queuePush(k);
-  };
-
-  /* ========== ⑧ 啟動 ========== */
-  function boot(){
-    ref = firebase.database().ref(SYNC_PATH);
-    ready = true;
-    setBadge('☁️ 已連線', '#10b981');
-    ref.once('value').then(snap => {
-      const m = meta();
-      const remoteKeys = {};
-      let changed = false;
-      snap.forEach(ch => {
-        let k; try { k = dec(ch.key); } catch(e){ return; }
-        remoteKeys[k] = true;
-        if (applyRemote(k, ch.val())) changed = true;
-      });
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (isExcluded(k) || remoteKeys[k]) continue;
-        queuePush(k);
-      }
-      ref.on('child_added',   s => onRemote(s));
-      ref.on('child_changed', s => onRemote(s));
-      if (changed) scheduleReload();
-    }).catch(err => {
-      console.error('[CloudSync]', err);
-      setBadge('⚠️ 無法連線 Firebase（檢查規則/設定）', '#ef4444');
-    });
-  }
-  function onRemote(snap){
-    let k; try { k = dec(snap.key); } catch(e){ return; }
-    if (applyRemote(k, snap.val())) scheduleReload();
-  }
-  function loadSdkThen(cb){
-    if (window.firebase && firebase.database) return cb();
-    const urls = [
-      'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-      'https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js'
-    ];
-    let i = 0;
-    (function next(){
-      if (i >= urls.length) return cb();
-      const s = document.createElement('script');
-      s.src = urls[i++]; s.onload = next; s.onerror = next;
-      document.head.appendChild(s);
-    })();
-  }
-  function waitReady(){
-    const iv = setInterval(() => {
-      const hasFb = window.firebase && firebase.apps && firebase.apps.length;
-      if (!hasFb) return;
-      // 資料庫規則要求登入，故等 Google 登入完成（白名單檢查在主 auth 區塊）才啟動同步
-      const user = (typeof _authUser !== 'undefined' && _authUser)
-                || (firebase.auth && firebase.auth().currentUser);
-      if (user) { clearInterval(iv); boot(); }
-    }, 300);
-  }
-  if (FIREBASE_CONFIG && !(window.firebase && firebase.apps && firebase.apps.length)) {
-    loadSdkThen(() => { if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG); boot(); });
-  } else {
-    waitReady();
-  }
-})();
-</script>
-
-<!-- ============================================================
-     品格圍圈輪值・時間定錨修正 v1
-     以「今天」為準，只顯示本週(週日~週六)與下週輪值；
-     暑假／學期結束後顯示「已結束」。
-     ============================================================ -->
-<script>
-(function(){
-  function getData(){
-    try{
-      var all = SEL_ROTATION || [];
-      var inSem = all.filter(function(r){ var d = new Date(r.date); return d >= SEM_START && d <= SEM_END; });
-      if (inSem.length) return { rows: inSem, placeholder: false };
-      var ph = (typeof _semesterRotationPlaceholder === 'function') ? _semesterRotationPlaceholder() : [];
-      return { rows: ph, placeholder: true };
-    }catch(e){ return { rows: (window.SEL_ROTATION||[]), placeholder: false }; }
-  }
-  function card(r, kind){
-    var p=String(r.date).split('/'), m=p[1], d=p[2];
-    var isNow=kind==='now';
-    var border=isNow?'#fdba74':'#93c5fd', bg=isNow?'#ffedd5':'#dbeafe', tcol=isNow?'#9a3412':'#1e40af';
-    var badge=isNow?'本週':'下週', label=(isNow?'本週':'下週')+'・第'+r.week+'週';
-    return '<div style="border:2px solid '+border+';border-radius:12px;padding:16px;background:'+bg+';position:relative">'
-      +'<span style="position:absolute;top:10px;right:10px;background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+badge+'</span>'
-      +'<div style="font-size:11px;font-weight:700;color:'+tcol+';opacity:0.7;margin-bottom:4px">'+label+'</div>'
-      +'<div style="font-size:22px;font-weight:800;color:'+tcol+';margin-bottom:2px">'+(r.theme||'')+'</div>'
-      +'<div style="font-size:12px;color:'+tcol+';opacity:0.75;margin-bottom:12px">📅 '+m+'/'+d+' (週四)</div>'
-      +'<div style="display:flex;flex-direction:column;gap:6px">'
-      +'<div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px"><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">A組・1.3.5年級</div><div style="font-size:15px;font-weight:700;color:#1e293b">👤 '+(r.A||'')+'</div></div>'
-      +'<div style="background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 10px"><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">B組・2.4.6年級</div><div style="font-size:15px;font-weight:700;color:#1e293b">👤 '+(r.B||'')+'</div></div>'
-      +'</div></div>';
-  }
-  function render(){
-    var grid=document.getElementById('selRotationGrid');
-    var nav=document.getElementById('selRotationNav');
-    if(nav) nav.innerHTML='';
-    if(!grid) return;
-    var got=getData();
-    var data=got.rows||[];
-    var msg=function(t){ return '<div style="text-align:center;color:#94a3b8;font-size:14px;padding:20px 0;grid-column:1/-1">'+t+'</div>'; };
-    if(!data.length){ grid.innerHTML=msg('尚無輪值資料'); return; }
-    var now=new Date(); now.setHours(0,0,0,0);
-    var sun=new Date(now); sun.setDate(now.getDate()-now.getDay());
-    var parse=function(s){ var a=String(s).split('/').map(Number); return new Date(a[0],a[1]-1,a[2]); };
-    var wk=function(dt){ return Math.floor((dt-sun)/(7*864e5)); };
-    var cur=null,nxt=null,firstD=null,lastD=null;
-    data.forEach(function(r){
-      var dt=parse(r.date); dt.setHours(0,0,0,0);
-      if(!firstD||dt<firstD)firstD=dt; if(!lastD||dt>lastD)lastD=dt;
-      var w=wk(dt); if(w===0)cur=r; else if(w===1)nxt=r;
-    });
-    var html=got.placeholder && typeof _ROTATION_PLACEHOLDER_NOTE!=='undefined'
-      ? '<div style="grid-column:1/-1;font-size:12px;color:#94a3b8;margin-bottom:2px">'+_ROTATION_PLACEHOLDER_NOTE+'</div>' : '';
-    if(cur) html+=card(cur,'now');
-    if(nxt) html+=card(nxt,'next');
-    if(!cur && !nxt){
-      if(lastD&&now>lastD) html=msg('🎉 本學期週四品格圍圈輪值已結束');
-      else if(firstD&&now<firstD) html=msg('📅 本學期輪值尚未開始');
-      else html=msg('📌 本週與下週無品格圍圈輪值安排');
-    }
-    grid.innerHTML=html;
-  }
-  window.renderSelRotation=render;
-  if(document.readyState!=='loading') render();
-  else document.addEventListener('DOMContentLoaded', render);
-})();
-</script>
